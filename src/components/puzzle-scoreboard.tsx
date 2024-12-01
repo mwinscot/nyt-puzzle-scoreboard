@@ -327,7 +327,7 @@ const PuzzleScoreboard = () => {
                     : 'bg-gray-100 text-gray-400 cursor-not-allowed'
               }`}
             >
-              {player1Name}'s Entry
+              {player1Name}s Entry
             </button>
             <button
               onClick={() => setCurrentEntry('player2')}
@@ -340,7 +340,7 @@ const PuzzleScoreboard = () => {
                     : 'bg-gray-100 text-gray-400 cursor-not-allowed'
               }`}
             >
-              {player2Name}'s Entry
+              {player2Name}s Entry
             </button>
           </div>
 
@@ -391,7 +391,7 @@ const PuzzleScoreboard = () => {
               onClick={finalizeDayScores}
               className="p-2 bg-blue-500 text-white rounded hover:bg-blue-600"
             >
-              Finalize Day's Scores
+              Finalize Days Scores
             </button>
           </div>
 
