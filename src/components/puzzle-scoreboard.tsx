@@ -152,7 +152,7 @@ const PuzzleScoreboard = () => {
 
     // Parse Connections
     if (text.includes('Connections')) {
-      let score = 1; // Base completion point
+      let score = 0;
       let incorrectAttempts = 0;
       
       const lines = text.split('\n');
@@ -160,35 +160,22 @@ const PuzzleScoreboard = () => {
         line.includes('🟪') || line.includes('🟩') || 
         line.includes('🟦') || line.includes('🟨')
       );
-
+    
       // Check if purple was solved first
-      if (gridLines.length === 4 && gridLines[0].includes('🟪')) {
-        score += 3; // Bonus points for purple first
+      if (gridLines.length > 0 && gridLines[0].includes('🟪')) {
+        score = 3; // Points for purple first
       }
-
-      // Count incorrect attempts from both X's and mixed color lines
-      const allAttemptLines = lines.filter(line => 
-        line.includes('🟪') || line.includes('🟩') || 
-        line.includes('🟦') || line.includes('🟨') || 
-        line.includes('X')
-      );
-
-      incorrectAttempts = allAttemptLines.reduce((count, line) => {
-        // Count X's
-        const xCount = (line.match(/X/g) || []).length;
-        
-        // Count mixed color lines (more than one color in a line)
+    
+      // Count mixed color lines
+      incorrectAttempts = gridLines.reduce((count, line) => {
         const colors = [/🟪/g, /🟩/g, /🟦/g, /🟨/g];
         const colorCount = colors.reduce((sum, color) => 
           sum + (line.match(color)?.length || 0), 0
         );
-        const hasMixedColors = colorCount > 1;
-
-        return count + xCount + (hasMixedColors ? 1 : 0);
+        return count + (colorCount > 1 ? 1 : 0);
       }, 0);
-
+    
       score = Math.max(1, score - incorrectAttempts); // Subtract penalties but keep minimum 1 point
-      
       gameScores.connections = score;
       totalScore += score;
     }
