@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Trophy, Target, Puzzle, Brain, Star } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
 
 interface BonusPoints {
   wordleQuick: boolean;
@@ -60,6 +61,7 @@ const PuzzleScoreboard = () => {
   const [inputText, setInputText] = useState<string>('');
   const [currentEntry, setCurrentEntry] = useState<'player1' | 'player2' | null>(null);
   const [currentDate, setCurrentDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [isConnected, setIsConnected] = useState<boolean>(false);
 
   const initialPlayerData = (): PlayerData => ({
     dailyScores: {},
@@ -76,13 +78,107 @@ const PuzzleScoreboard = () => {
     player2: initialPlayerData()
   });
 
-  // Load saved data on startup
-  useEffect(() => {
-    const savedData = loadSavedData();
-    if (savedData) {
-      setScores(savedData);
+   // Add the Supabase test function here
+   const testSupabaseConnection = async () => {
+    try {
+      // First test basic connection
+      console.log('Testing Supabase connection...');
+      const { data: tableData, error: tableError } = await supabase
+        .from('daily_scores')
+        .select('*')
+        .limit(1);
+  
+      if (tableError) {
+        console.error('Table error details:', {
+          code: tableError.code,
+          message: tableError.message,
+          details: tableError.details
+        });
+        setIsConnected(false);
+        return false;
+      }
+  
+      // If we get here, connection is working
+      console.log('Table access successful:', tableData);
+      setIsConnected(true);
+      return true;
+    } catch (error) {
+      console.error('Connection test failed:', error);
+      setIsConnected(false);
+      return false;
     }
+  };
+
+  useEffect(() => {
+    testSupabaseConnection();
   }, []);
+
+// Add this useEffect for loading data from Supabase
+useEffect(() => {
+  const loadInitialData = async () => {
+    try {
+      // First get the players
+      const { data: players, error: playersError } = await supabase
+        .from('players')
+        .select('*')
+        .order('id')
+        .limit(2);
+
+      if (playersError) throw playersError;
+
+      // Create players if they don't exist
+      if (!players || players.length < 2) {
+        const [player1, player2] = await Promise.all([
+          supabase
+            .from('players')
+            .insert({ name: player1Name })
+            .select()
+            .single(),
+          supabase
+            .from('players')
+            .insert({ name: player2Name })
+            .select()
+            .single()
+        ]);
+
+        if (player1.error || player2.error) throw player1.error || player2.error;
+      }
+
+      // Load scores
+      const { data: scoresData, error: scoresError } = await supabase
+        .from('daily_scores')
+        .select('*')
+        .eq('date', currentDate);
+
+      if (scoresError) throw scoresError;
+
+      if (scoresData) {
+        const newScores = { ...scores };
+        scoresData.forEach(score => {
+          const playerKey = score.player_id === players![0].id ? 'player1' : 'player2';
+          newScores[playerKey].dailyScores[currentDate] = {
+            date: score.date,
+            wordle: score.wordle,
+            connections: score.connections,
+            strands: score.strands,
+            total: score.total,
+            bonusPoints: {
+              wordleQuick: score.bonus_wordle,
+              connectionsPerfect: score.bonus_connections,
+              strandsSpanagram: score.bonus_strands
+            },
+            finalized: score.finalized
+          };
+        });
+        setScores(newScores);
+      }
+    } catch (error) {
+      console.error('Error loading data:', error);
+    }
+  };
+
+  loadInitialData();
+}, [currentDate]);
 
   // Save data whenever scores change
   useEffect(() => {
@@ -183,81 +279,105 @@ const PuzzleScoreboard = () => {
     return { score: totalScore, bonusPoints, gameScores };
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!currentEntry || !inputText) return;
-
+  
     const { score, bonusPoints, gameScores } = calculateScores(inputText);
     
-    setScores(prevScores => {
-      const playerScores = prevScores[currentEntry];
-      const existingDayScore = playerScores.dailyScores[currentDate];
-      
-      // Calculate bonus point changes
-      const oldBonuses = existingDayScore?.bonusPoints || {
-        wordleQuick: false,
-        connectionsPerfect: false,
-        strandsSpanagram: false
-      };
-
-      const bonusChanges = {
-        wordle: (bonusPoints.wordleQuick ? 1 : 0) - (oldBonuses.wordleQuick ? 1 : 0),
-        connections: (bonusPoints.connectionsPerfect ? 1 : 0) - (oldBonuses.connectionsPerfect ? 1 : 0),
-        strands: (bonusPoints.strandsSpanagram ? 1 : 0) - (oldBonuses.strandsSpanagram ? 1 : 0)
-      };
-      
-      // Create or update the daily score
-      const updatedDailyScore: DailyScore = {
-        date: currentDate,
-        wordle: gameScores.wordle + (existingDayScore?.wordle || 0),
-        connections: gameScores.connections + (existingDayScore?.connections || 0),
-        strands: gameScores.strands + (existingDayScore?.strands || 0),
-        total: score + (existingDayScore?.total || 0),
-        bonusPoints: {
-          wordleQuick: bonusPoints.wordleQuick || (existingDayScore?.bonusPoints.wordleQuick || false),
-          connectionsPerfect: bonusPoints.connectionsPerfect || (existingDayScore?.bonusPoints.connectionsPerfect || false),
-          strandsSpanagram: bonusPoints.strandsSpanagram || (existingDayScore?.bonusPoints.strandsSpanagram || false)
-        },
-        finalized: false
-      };
-
-      const newPlayerScores = {
-        ...playerScores,
-        dailyScores: {
-          ...playerScores.dailyScores,
-          [currentDate]: updatedDailyScore
-        },
-        totalBonuses: {
-          wordle: playerScores.totalBonuses.wordle + bonusChanges.wordle,
-          connections: playerScores.totalBonuses.connections + bonusChanges.connections,
-          strands: playerScores.totalBonuses.strands + bonusChanges.strands
-        }
-      };
-
-      // Recalculate total
-      newPlayerScores.total = Object.values(newPlayerScores.dailyScores)
-        .reduce((sum, day) => sum + day.total, 0);
-
-      return {
-        ...prevScores,
-        [currentEntry]: newPlayerScores
-      };
-    });
-
-    setInputText('');
-    setCurrentEntry(null);
+    try {
+      // Get player ID for Keith/Mike based on currentEntry
+      const { data: player, error: playerError } = await supabase
+        .from('players')
+        .select('id')
+        .eq('name', currentEntry === 'player1' ? 'Keith' : 'Mike')
+        .single();
+  
+      if (playerError) {
+        console.error('Error getting player:', playerError);
+        return;
+      }
+  
+      // Insert score into Supabase
+      const { error: scoreError } = await supabase
+        .from('daily_scores')
+        .upsert({
+          date: currentDate,
+          player_id: player.id,
+          wordle: gameScores.wordle,
+          connections: gameScores.connections,
+          strands: gameScores.strands,
+          total: score,
+          bonus_wordle: bonusPoints.wordleQuick,
+          bonus_connections: bonusPoints.connectionsPerfect,
+          bonus_strands: bonusPoints.strandsSpanagram,
+          finalized: false
+        });
+  
+      if (scoreError) {
+        console.error('Error inserting score:', scoreError);
+        return;
+      }
+  
+      // Update local state
+      setScores(prevScores => {
+        const playerScores = prevScores[currentEntry];
+        const updatedDailyScore: DailyScore = {
+          date: currentDate,
+          wordle: gameScores.wordle,
+          connections: gameScores.connections,
+          strands: gameScores.strands,
+          total: score,
+          bonusPoints: {
+            wordleQuick: bonusPoints.wordleQuick,
+            connectionsPerfect: bonusPoints.connectionsPerfect,
+            strandsSpanagram: bonusPoints.strandsSpanagram
+          },
+          finalized: false
+        };
+  
+        return {
+          ...prevScores,
+          [currentEntry]: {
+            ...playerScores,
+            dailyScores: {
+              ...playerScores.dailyScores,
+              [currentDate]: updatedDailyScore
+            }
+          }
+        };
+      });
+  
+      setInputText('');
+      setCurrentEntry(null);
+  
+    } catch (error) {
+      console.error('Error submitting score:', error);
+    }
   };
 
-  const finalizeDayScores = () => {
-    setScores(prevScores => {
-      const newScores = { ...prevScores };
-      if (newScores.player1.dailyScores[currentDate]) {
-        newScores.player1.dailyScores[currentDate].finalized = true;
-      }
-      if (newScores.player2.dailyScores[currentDate]) {
-        newScores.player2.dailyScores[currentDate].finalized = true;
-      }
-      return newScores;
-    });
+  const finalizeDayScores = async () => {
+    try {
+      const { error } = await supabase
+        .from('daily_scores')
+        .update({ finalized: true })
+        .eq('date', currentDate);
+  
+      if (error) throw error;
+  
+      // Update local state
+      setScores(prevScores => {
+        const newScores = { ...prevScores };
+        if (newScores.player1.dailyScores[currentDate]) {
+          newScores.player1.dailyScores[currentDate].finalized = true;
+        }
+        if (newScores.player2.dailyScores[currentDate]) {
+          newScores.player2.dailyScores[currentDate].finalized = true;
+        }
+        return newScores;
+      });
+    } catch (error) {
+      console.error('Error finalizing scores:', error);
+    }
   };
 
   const canEditDate = (date: string) => {
@@ -327,7 +447,7 @@ const PuzzleScoreboard = () => {
                     : 'bg-gray-100 text-gray-400 cursor-not-allowed'
               }`}
             >
-              {player1Name}'s Entry
+              {player1Name}s Entry
             </button>
             <button
               onClick={() => setCurrentEntry('player2')}
@@ -340,7 +460,7 @@ const PuzzleScoreboard = () => {
                     : 'bg-gray-100 text-gray-400 cursor-not-allowed'
               }`}
             >
-              {player2Name}'s Entry
+              {player2Name}s Entry
             </button>
           </div>
 
@@ -391,7 +511,7 @@ const PuzzleScoreboard = () => {
               onClick={finalizeDayScores}
               className="p-2 bg-blue-500 text-white rounded hover:bg-blue-600"
             >
-              Finalize Day's Scores
+              Finalize Days Scores
             </button>
           </div>
 
