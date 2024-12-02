@@ -64,34 +64,6 @@ const PuzzleScoreboard = () => {
     player2: initialPlayerData()
   });
 
-  const testSupabaseConnection = async () => {
-    try {
-      console.log('Testing Supabase connection...');
-      const { data: tableData, error: tableError } = await supabase
-        .from('daily_scores')
-        .select('*')
-        .limit(1);
-  
-      if (tableError) {
-        console.error('Table error details:', {
-          code: tableError.code,
-          message: tableError.message,
-          details: tableError.details
-        });
-        setIsConnected(false);
-        return false;
-      }
-  
-      console.log('Table access successful:', tableData);
-      setIsConnected(true);
-      return true;
-    } catch (error) {
-      console.error('Connection test failed:', error);
-      setIsConnected(false);
-      return false;
-    }
-  };
-
   const fetchAllScores = async () => {
     try {
       const { data: scores, error } = await supabase
@@ -142,7 +114,6 @@ const PuzzleScoreboard = () => {
   };
 
   useEffect(() => {
-    testSupabaseConnection();
     fetchAllScores();
   }, [currentDate]);
 
@@ -181,23 +152,45 @@ const PuzzleScoreboard = () => {
 
     // Parse Connections
     if (text.includes('Connections')) {
-      gameScores.connections = 1;
-      totalScore++; // Base point
+      let score = 1; // Base completion point
+      let incorrectAttempts = 0;
       
       const lines = text.split('\n');
       const gridLines = lines.filter((line: string) => 
         line.includes('🟪') || line.includes('🟩') || 
         line.includes('🟦') || line.includes('🟨')
       );
-      
-      if (gridLines.length === 4 && 
-          gridLines[0].includes('🟪') && 
-          gridLines[1].includes('🟩') && 
-          gridLines[2].includes('🟦') && 
-          gridLines[3].includes('🟨')) {
-        totalScore++; // Bonus point
-        bonusPoints.connectionsPerfect = true;
+
+      // Check if purple was solved first
+      if (gridLines.length === 4 && gridLines[0].includes('🟪')) {
+        score += 3; // Bonus points for purple first
       }
+
+      // Count incorrect attempts from both X's and mixed color lines
+      const allAttemptLines = lines.filter(line => 
+        line.includes('🟪') || line.includes('🟩') || 
+        line.includes('🟦') || line.includes('🟨') || 
+        line.includes('X')
+      );
+
+      incorrectAttempts = allAttemptLines.reduce((count, line) => {
+        // Count X's
+        const xCount = (line.match(/X/g) || []).length;
+        
+        // Count mixed color lines (more than one color in a line)
+        const colors = [/🟪/g, /🟩/g, /🟦/g, /🟨/g];
+        const colorCount = colors.reduce((sum, color) => 
+          sum + (line.match(color)?.length || 0), 0
+        );
+        const hasMixedColors = colorCount > 1;
+
+        return count + xCount + (hasMixedColors ? 1 : 0);
+      }, 0);
+
+      score = Math.max(1, score - incorrectAttempts); // Subtract penalties but keep minimum 1 point
+      
+      gameScores.connections = score;
+      totalScore += score;
     }
 
     // Parse Strands
