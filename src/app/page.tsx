@@ -1,6 +1,6 @@
 'use client'
 
-import PuzzleScoreboard from '@/components/puzzle-scoreboard';
+import PuzzleScoreboard from '@/components/puzzle-scoreboard';    
 
 export default function Home() {
   return (

@@ -42,46 +42,30 @@ interface ScoreCardProps {
   bonusCount?: number;
 }
 
-const STORAGE_KEY = 'nyt-puzzle-scores';
-
-const loadSavedData = () => {
-  if (typeof window === 'undefined') return null;
-  const savedData = localStorage.getItem(STORAGE_KEY);
-  return savedData ? JSON.parse(savedData) : null;
-};
-
-const saveData = (data: PlayerScores) => {
-  if (typeof window === 'undefined') return;
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-};
+const initialPlayerData = (): PlayerData => ({
+  dailyScores: {},
+  total: 0,
+  totalBonuses: {
+    wordle: 0,
+    connections: 0,
+    strands: 0
+  }
+});
 
 const PuzzleScoreboard = () => {
-  const [player1Name, setPlayer1Name] = useState<string>('Player 1');
-  const [player2Name, setPlayer2Name] = useState<string>('Player 2');
+  const [player1Name, setPlayer1Name] = useState<string>('Keith');
+  const [player2Name, setPlayer2Name] = useState<string>('Mike');
   const [inputText, setInputText] = useState<string>('');
   const [currentEntry, setCurrentEntry] = useState<'player1' | 'player2' | null>(null);
   const [currentDate, setCurrentDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [isConnected, setIsConnected] = useState<boolean>(false);
-
-  const initialPlayerData = (): PlayerData => ({
-    dailyScores: {},
-    total: 0,
-    totalBonuses: {
-      wordle: 0,
-      connections: 0,
-      strands: 0
-    }
-  });
-
   const [scores, setScores] = useState<PlayerScores>({
     player1: initialPlayerData(),
     player2: initialPlayerData()
   });
 
-   // Add the Supabase test function here
-   const testSupabaseConnection = async () => {
+  const testSupabaseConnection = async () => {
     try {
-      // First test basic connection
       console.log('Testing Supabase connection...');
       const { data: tableData, error: tableError } = await supabase
         .from('daily_scores')
@@ -98,7 +82,6 @@ const PuzzleScoreboard = () => {
         return false;
       }
   
-      // If we get here, connection is working
       console.log('Table access successful:', tableData);
       setIsConnected(true);
       return true;
@@ -109,98 +92,59 @@ const PuzzleScoreboard = () => {
     }
   };
 
-  useEffect(() => {
-    testSupabaseConnection();
-  }, []);
-
-// Add this useEffect for loading data from Supabase
-useEffect(() => {
-  const loadInitialData = async () => {
+  const fetchAllScores = async () => {
     try {
-      // First get the players
-      const { data: players, error: playersError } = await supabase
-        .from('players')
-        .select('*')
-        .order('id')
-        .limit(2);
-
-      if (playersError) throw playersError;
-
-      // Create players if they don't exist
-      if (!players || players.length < 2) {
-        const [player1, player2] = await Promise.all([
-          supabase
-            .from('players')
-            .insert({ name: player1Name })
-            .select()
-            .single(),
-          supabase
-            .from('players')
-            .insert({ name: player2Name })
-            .select()
-            .single()
-        ]);
-
-        if (player1.error || player2.error) throw player1.error || player2.error;
-      }
-
-      // Load scores
-      const { data: scoresData, error: scoresError } = await supabase
+      const { data: scores, error } = await supabase
         .from('daily_scores')
-        .select('*')
-        .eq('date', currentDate);
-
-      if (scoresError) throw scoresError;
-
-      if (scoresData) {
-        const newScores = { ...scores };
-        scoresData.forEach(score => {
-          const playerKey = score.player_id === players![0].id ? 'player1' : 'player2';
-          newScores[playerKey].dailyScores[currentDate] = {
-            date: score.date,
-            wordle: score.wordle,
-            connections: score.connections,
-            strands: score.strands,
-            total: score.total,
-            bonusPoints: {
-              wordleQuick: score.bonus_wordle,
-              connectionsPerfect: score.bonus_connections,
-              strandsSpanagram: score.bonus_strands
-            },
-            finalized: score.finalized
-          };
-        });
-        setScores(newScores);
-      }
+        .select(`
+          *,
+          players (
+            name
+          )
+        `);
+  
+      if (error) throw error;
+  
+      const newScores = {
+        player1: initialPlayerData(),
+        player2: initialPlayerData()
+      };
+  
+      scores?.forEach(score => {
+        const playerKey = score.players.name === 'Keith' ? 'player1' : 'player2';
+        
+        // Add to daily scores
+        newScores[playerKey].dailyScores[score.date] = {
+          date: score.date,
+          wordle: score.wordle,
+          connections: score.connections,
+          strands: score.strands,
+          total: score.total,
+          bonusPoints: {
+            wordleQuick: score.bonus_wordle,
+            connectionsPerfect: score.bonus_connections,
+            strandsSpanagram: score.bonus_strands
+          },
+          finalized: score.finalized
+        };
+  
+        // Update running totals
+        newScores[playerKey].total += score.total;
+        if (score.bonus_wordle) newScores[playerKey].totalBonuses.wordle++;
+        if (score.bonus_connections) newScores[playerKey].totalBonuses.connections++;
+        if (score.bonus_strands) newScores[playerKey].totalBonuses.strands++;
+      });
+  
+      setScores(newScores);
     } catch (error) {
-      console.error('Error loading data:', error);
+      console.error('Error fetching scores:', error);
     }
   };
 
-  loadInitialData();
-}, [currentDate]);
-
-  // Save data whenever scores change
   useEffect(() => {
-    saveData(scores);
-  }, [scores]);
-
-  // Load/save player names
-  useEffect(() => {
-    const savedNames = localStorage.getItem('nyt-puzzle-player-names');
-    if (savedNames) {
-      const { player1, player2 } = JSON.parse(savedNames);
-      setPlayer1Name(player1);
-      setPlayer2Name(player2);
-    }
-  }, []);
-
-  useEffect(() => {
-    localStorage.setItem('nyt-puzzle-player-names', JSON.stringify({
-      player1: player1Name,
-      player2: player2Name
-    }));
-  }, [player1Name, player2Name]);
+    testSupabaseConnection();
+    fetchAllScores();
+  }, [currentDate]);
 
   const calculateScores = (text: string): { score: number, bonusPoints: BonusPoints, gameScores: { wordle: number, connections: number, strands: number } } => {
     let totalScore = 0;
@@ -285,19 +229,14 @@ useEffect(() => {
     const { score, bonusPoints, gameScores } = calculateScores(inputText);
     
     try {
-      // Get player ID for Keith/Mike based on currentEntry
       const { data: player, error: playerError } = await supabase
         .from('players')
         .select('id')
         .eq('name', currentEntry === 'player1' ? 'Keith' : 'Mike')
         .single();
   
-      if (playerError) {
-        console.error('Error getting player:', playerError);
-        return;
-      }
+      if (playerError) throw playerError;
   
-      // Insert score into Supabase
       const { error: scoreError } = await supabase
         .from('daily_scores')
         .upsert({
@@ -313,39 +252,10 @@ useEffect(() => {
           finalized: false
         });
   
-      if (scoreError) {
-        console.error('Error inserting score:', scoreError);
-        return;
-      }
+      if (scoreError) throw scoreError;
   
-      // Update local state
-      setScores(prevScores => {
-        const playerScores = prevScores[currentEntry];
-        const updatedDailyScore: DailyScore = {
-          date: currentDate,
-          wordle: gameScores.wordle,
-          connections: gameScores.connections,
-          strands: gameScores.strands,
-          total: score,
-          bonusPoints: {
-            wordleQuick: bonusPoints.wordleQuick,
-            connectionsPerfect: bonusPoints.connectionsPerfect,
-            strandsSpanagram: bonusPoints.strandsSpanagram
-          },
-          finalized: false
-        };
-  
-        return {
-          ...prevScores,
-          [currentEntry]: {
-            ...playerScores,
-            dailyScores: {
-              ...playerScores.dailyScores,
-              [currentDate]: updatedDailyScore
-            }
-          }
-        };
-      });
+      // Refresh all scores from database
+      await fetchAllScores();
   
       setInputText('');
       setCurrentEntry(null);
@@ -364,17 +274,7 @@ useEffect(() => {
   
       if (error) throw error;
   
-      // Update local state
-      setScores(prevScores => {
-        const newScores = { ...prevScores };
-        if (newScores.player1.dailyScores[currentDate]) {
-          newScores.player1.dailyScores[currentDate].finalized = true;
-        }
-        if (newScores.player2.dailyScores[currentDate]) {
-          newScores.player2.dailyScores[currentDate].finalized = true;
-        }
-        return newScores;
-      });
+      await fetchAllScores();
     } catch (error) {
       console.error('Error finalizing scores:', error);
     }
@@ -403,6 +303,8 @@ useEffect(() => {
 
   return (
     <div className="w-full max-w-4xl bg-white rounded-lg shadow-sm border">
+      return (
+    <div className="w-full max-w-4xl bg-white rounded-lg shadow-sm border">
       <div className="p-6">
         <h2 className="text-2xl font-bold text-center">NYT Puzzle Competition Scoreboard</h2>
         <div className="mt-4 text-center">
@@ -416,24 +318,6 @@ useEffect(() => {
       </div>
       <div className="p-6 pt-0">
         <div className="space-y-6">
-          {/* Player Names Input */}
-          <div className="flex space-x-4">
-            <input
-              type="text"
-              value={player1Name}
-              onChange={(e) => setPlayer1Name(e.target.value)}
-              className="p-2 border rounded flex-1"
-              placeholder="Player 1 Name"
-            />
-            <input
-              type="text"
-              value={player2Name}
-              onChange={(e) => setPlayer2Name(e.target.value)}
-              className="p-2 border rounded flex-1"
-              placeholder="Player 2 Name"
-            />
-          </div>
-
           {/* Player Selection */}
           <div className="flex space-x-4">
             <button
@@ -447,7 +331,7 @@ useEffect(() => {
                     : 'bg-gray-100 text-gray-400 cursor-not-allowed'
               }`}
             >
-              {player1Name}s Entry
+              Keith's Entry
             </button>
             <button
               onClick={() => setCurrentEntry('player2')}
@@ -460,7 +344,7 @@ useEffect(() => {
                     : 'bg-gray-100 text-gray-400 cursor-not-allowed'
               }`}
             >
-              {player2Name}s Entry
+              Mike's Entry
             </button>
           </div>
 
@@ -511,7 +395,7 @@ useEffect(() => {
               onClick={finalizeDayScores}
               className="p-2 bg-blue-500 text-white rounded hover:bg-blue-600"
             >
-              Finalize Days Scores
+              Finalize Day's Scores
             </button>
           </div>
 
@@ -519,7 +403,7 @@ useEffect(() => {
           <div className="grid grid-cols-2 gap-8">
             {/* Player 1 Scores */}
             <div className="space-y-4">
-              <h3 className="text-xl font-bold">{player1Name}</h3>
+              <h3 className="text-xl font-bold">Keith</h3>
               <ScoreCard 
                 title="Total Score" 
                 score={scores.player1.total} 
@@ -553,7 +437,7 @@ useEffect(() => {
 
             {/* Player 2 Scores */}
             <div className="space-y-4">
-              <h3 className="text-xl font-bold">{player2Name}</h3>
+              <h3 className="text-xl font-bold">Mike</h3>
               <ScoreCard 
                 title="Total Score" 
                 score={scores.player2.total} 
@@ -587,6 +471,8 @@ useEffect(() => {
           </div>
         </div>
       </div>
+    </div>
+  );
     </div>
   );
 };
