@@ -163,26 +163,32 @@ const PuzzleScoreboard = () => {
         line.includes('🟦') || line.includes('🟨')
       );
       console.log("Grid lines:", gridLines);
-    
+
       // Check if purple was solved first
       console.log("First line has purple:", gridLines[0]?.includes('🟪'));
       if (gridLines.length > 0 && gridLines[0].includes('🟪')) {
         score = 3;
         console.log("Score after purple:", score);
       }
-    
+
       // Count mixed colors
       incorrectAttempts = gridLines.reduce((count, line) => {
-        const colors = [/🟪/g, /🟩/g, /🟦/g, /🟨/g];
-        const colorCount = colors.reduce((sum, color) => 
-          sum + (line.match(color)?.length || 0), 0
-        );
-        const hasMixedColors = colorCount > 1;
-        console.log("Line:", line, "Color count:", colorCount, "Mixed:", hasMixedColors);
+        // Count how many different colors appear in the line
+        const hasRed = line.includes('🟪');
+        const hasGreen = line.includes('🟩');
+        const hasBlue = line.includes('🟦');
+        const hasYellow = line.includes('🟨');
+        
+        // Count how many different colors are present
+        const differentColors = [hasRed, hasGreen, hasBlue, hasYellow]
+          .filter(Boolean).length;
+        
+        const hasMixedColors = differentColors > 1;
+        console.log("Line:", line, "Different colors:", differentColors, "Mixed:", hasMixedColors);
         return count + (hasMixedColors ? 1 : 0);
       }, 0);
       console.log("Incorrect attempts:", incorrectAttempts);
-    
+
       score = Math.max(1, score - incorrectAttempts);
       console.log("Final score:", score);
       gameScores.connections = score;
