@@ -4,6 +4,13 @@ import React, { useState, useEffect } from 'react';
 import { Trophy, Target, Puzzle, Brain, Star } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
+interface TotalScoreHeaderProps {
+  player1Score: number;
+  player2Score: number;
+  player1Name: string;
+  player2Name: string;
+}
+
 interface BonusPoints {
   wordleQuick: boolean;
   connectionsPerfect: boolean;
@@ -42,6 +49,39 @@ interface ScoreCardProps {
   bonusCount?: number;
 }
 
+const TotalScoreHeader: React.FC<TotalScoreHeaderProps> = ({ player1Score, player2Score, player1Name, player2Name }) => {
+  const getWinnerStyles = (score1: number, score2: number) => {
+    if (score1 > score2) return "text-green-600";
+    if (score2 > score1) return "text-red-600";
+    return "text-gray-900";
+  };
+
+  return (
+    <div className="mb-8 p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg shadow">
+      <div className="grid grid-cols-2 gap-8">
+        <div className="text-center">
+          <div className="text-lg font-semibold text-gray-600">{player1Name}</div>
+          <div className={`text-5xl font-bold mt-2 ${getWinnerStyles(player1Score, player2Score)}`}>
+            {player1Score}
+          </div>
+        </div>
+        
+        <div className="text-center">
+          <div className="text-lg font-semibold text-gray-600">{player2Name}</div>
+          <div className={`text-5xl font-bold mt-2 ${getWinnerStyles(player2Score, player1Score)}`}>
+            {player2Score}
+          </div>
+        </div>
+      </div>
+      
+      <div className="mt-4 flex justify-center items-center">
+        <Trophy className="w-5 h-5 text-yellow-500 mr-2" />
+        <span className="text-sm text-gray-600 font-medium">Total Points</span>
+      </div>
+    </div>
+  );
+};
+
 const initialPlayerData = (): PlayerData => ({
   dailyScores: {},
   total: 0,
@@ -51,6 +91,22 @@ const initialPlayerData = (): PlayerData => ({
     strands: 0
   }
 });
+
+const ScoreCard: React.FC<ScoreCardProps> = ({ title, score, icon: Icon, bonusCount }) => (
+  <div className="flex items-center space-x-2 p-4 bg-gray-100 rounded-lg">
+    <Icon className="w-6 h-6 text-blue-500" />
+    <div className="flex-1">
+      <div className="text-sm text-gray-600">{title}</div>
+      <div className="text-xl font-bold">{score}</div>
+    </div>
+    {bonusCount !== undefined && bonusCount > 0 && (
+      <div className="flex items-center text-yellow-500">
+        <Star className="w-4 h-4" />
+        <span className="ml-1">{bonusCount}</span>
+      </div>
+    )}
+  </div>
+);
 
 const PuzzleScoreboard = () => {
   const [player1Name, setPlayer1Name] = useState<string>('Keith');
@@ -179,7 +235,7 @@ const PuzzleScoreboard = () => {
 
       gameScores.connections = score;
       totalScore += score;
-    }  // Added missing closing brace for Connections section
+    }
     
     // Parse Strands
     if (text.includes('Strands')) {
@@ -202,7 +258,7 @@ const PuzzleScoreboard = () => {
     }
 
     return { score: totalScore, bonusPoints, gameScores };
-};
+  };
 
   const handleSubmit = async () => {
     if (!currentEntry || !inputText) return;
@@ -266,24 +322,7 @@ const PuzzleScoreboard = () => {
     return date === currentDate && (!playerScores || !playerScores.finalized);
   };
 
-  const ScoreCard: React.FC<ScoreCardProps> = ({ title, score, icon: Icon, bonusCount }) => (
-    <div className="flex items-center space-x-2 p-4 bg-gray-100 rounded-lg">
-      <Icon className="w-6 h-6 text-blue-500" />
-      <div className="flex-1">
-        <div className="text-sm text-gray-600">{title}</div>
-        <div className="text-xl font-bold">{score}</div>
-      </div>
-      {bonusCount !== undefined && bonusCount > 0 && (
-        <div className="flex items-center text-yellow-500">
-          <Star className="w-4 h-4" />
-          <span className="ml-1">{bonusCount}</span>
-        </div>
-      )}
-    </div>
-  );
-
   return (
-    <div className="w-full max-w-4xl bg-white rounded-lg shadow-sm border">
     <div className="w-full max-w-4xl bg-white rounded-lg shadow-sm border">
       <div className="p-6">
         <h2 className="text-2xl font-bold text-center">NYT Puzzle Competition Scoreboard</h2>
@@ -295,8 +334,14 @@ const PuzzleScoreboard = () => {
             className="p-2 border rounded"
           />
         </div>
-      </div>
-      <div className="p-6 pt-0">
+        
+        <TotalScoreHeader 
+          player1Score={scores.player1.total}
+          player2Score={scores.player2.total}
+          player1Name={player1Name}
+          player2Name={player2Name}
+        />
+
         <div className="space-y-6">
           {/* Player Selection */}
           <div className="flex space-x-4">
@@ -385,11 +430,6 @@ const PuzzleScoreboard = () => {
             <div className="space-y-4">
               <h3 className="text-xl font-bold">Keith</h3>
               <ScoreCard 
-                title="Total Score" 
-                score={scores.player1.total} 
-                icon={Trophy}
-              />
-              <ScoreCard 
                 title="Wordle Wins" 
                 score={scores.player1.dailyScores[currentDate]?.wordle || 0} 
                 icon={Target}
@@ -419,11 +459,6 @@ const PuzzleScoreboard = () => {
             <div className="space-y-4">
               <h3 className="text-xl font-bold">Mike</h3>
               <ScoreCard 
-                title="Total Score" 
-                score={scores.player2.total} 
-                icon={Trophy}
-              />
-              <ScoreCard 
                 title="Wordle Wins" 
                 score={scores.player2.dailyScores[currentDate]?.wordle || 0} 
                 icon={Target}
@@ -451,8 +486,6 @@ const PuzzleScoreboard = () => {
           </div>
         </div>
       </div>
-    </div>
-  );
     </div>
   );
 };
