@@ -152,49 +152,35 @@ const PuzzleScoreboard = () => {
 
     // Parse Connections
     if (text.includes('Connections')) {
-      let score = 0;
-      let incorrectAttempts = 0;
+      let score = 1; // Start with base score of 1
       
       const lines = text.split('\n');
-      console.log("Lines:", lines);
-      
       const gridLines = lines.filter((line: string) => 
-        line.includes('🟪') || line.includes('🟩') || 
-        line.includes('🟦') || line.includes('🟨')
+          line.includes('🟪') || line.includes('🟩') || 
+          line.includes('🟦') || line.includes('🟨')
       );
-      console.log("Grid lines:", gridLines);
 
-      // Check if purple was solved first
-      console.log("First line has purple:", gridLines[0]?.includes('🟪'));
-      if (gridLines.length > 0 && gridLines[0].includes('🟪')) {
-        score = 3;
-        console.log("Score after purple:", score);
+      // Check if purple was solved first AND no mixed colors in first line
+      const firstLine = gridLines[0];
+      if (firstLine?.includes('🟪')) {
+          const hasRed = firstLine.includes('🟪');
+          const hasGreen = firstLine.includes('🟩');
+          const hasBlue = firstLine.includes('🟦');
+          const hasYellow = firstLine.includes('🟨');
+          
+          const differentColors = [hasRed, hasGreen, hasBlue, hasYellow]
+              .filter(Boolean).length;
+          
+          // Only give extra points if the first line is all purple
+          if (differentColors === 1 && hasRed) {
+              score = 3;
+          }
       }
 
-      // Count mixed colors
-      incorrectAttempts = gridLines.reduce((count, line) => {
-        // Count how many different colors appear in the line
-        const hasRed = line.includes('🟪');
-        const hasGreen = line.includes('🟩');
-        const hasBlue = line.includes('🟦');
-        const hasYellow = line.includes('🟨');
-        
-        // Count how many different colors are present
-        const differentColors = [hasRed, hasGreen, hasBlue, hasYellow]
-          .filter(Boolean).length;
-        
-        const hasMixedColors = differentColors > 1;
-        console.log("Line:", line, "Different colors:", differentColors, "Mixed:", hasMixedColors);
-        return count + (hasMixedColors ? 1 : 0);
-      }, 0);
-      console.log("Incorrect attempts:", incorrectAttempts);
-
-      score = Math.max(1, score - incorrectAttempts);
-      console.log("Final score:", score);
       gameScores.connections = score;
       totalScore += score;
-    }
-
+    }  // Added missing closing brace for Connections section
+    
     // Parse Strands
     if (text.includes('Strands')) {
       gameScores.strands = 1;
@@ -216,7 +202,7 @@ const PuzzleScoreboard = () => {
     }
 
     return { score: totalScore, bonusPoints, gameScores };
-  };
+};
 
   const handleSubmit = async () => {
     if (!currentEntry || !inputText) return;
@@ -298,7 +284,6 @@ const PuzzleScoreboard = () => {
 
   return (
     <div className="w-full max-w-4xl bg-white rounded-lg shadow-sm border">
-      return (
     <div className="w-full max-w-4xl bg-white rounded-lg shadow-sm border">
       <div className="p-6">
         <h2 className="text-2xl font-bold text-center">NYT Puzzle Competition Scoreboard</h2>
