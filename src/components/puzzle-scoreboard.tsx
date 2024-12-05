@@ -252,8 +252,9 @@ const PuzzleScoreboard = () => {
         gameScores.strands = 1;  // Base point
         
         const firstRow = gridLines[0];
-        const firstThreeSpots = firstRow.slice(0, 12);
-        if (firstThreeSpots.includes('🟡')) {
+        // Get just the first three emoji circles
+        const firstThreeEmoji = Array.from(firstRow).filter(char => char === '🔵' || char === '🟡').slice(0, 3);
+        if (firstThreeEmoji.includes('🟡')) {
           gameScores.strands++;  // Bonus point
           bonusPoints.strandsSpanagram = true;
         }
