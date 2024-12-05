@@ -174,7 +174,6 @@ const PuzzleScoreboard = () => {
   }, [currentDate]);
 
   const calculateScores = (text: string): { score: number, bonusPoints: BonusPoints, gameScores: { wordle: number, connections: number, strands: number } } => {
-    let totalScore = 0;
     const bonusPoints: BonusPoints = {
       wordleQuick: false,
       connectionsPerfect: false,
@@ -185,27 +184,26 @@ const PuzzleScoreboard = () => {
       connections: 0,
       strands: 0
     };
-
+  
     // Parse Wordle
     if (text.includes('Wordle')) {
       const wordleLines = text.split('\n');
       const scoreLine = wordleLines.find(line => line.includes('/6'));
       
       if (scoreLine) {
-        gameScores.wordle = 1;
-        totalScore++; // Base point for completion
+        gameScores.wordle = 1;  // Base point
         
         const guessMatch = scoreLine.match(/(\d+)\/6/);
         if (guessMatch) {
           const guesses = parseInt(guessMatch[1]);
           if (guesses <= 3) {
-            totalScore++; // Bonus point
+            gameScores.wordle++;  // Bonus point
             bonusPoints.wordleQuick = true;
           }
         }
       }
     }
-
+  
     // Parse Connections
     if (text.includes('Connections')) {
       let score = 0;
@@ -215,7 +213,7 @@ const PuzzleScoreboard = () => {
           line.includes('🟪') || line.includes('🟩') || 
           line.includes('🟦') || line.includes('🟨')
       );
-
+  
       if (gridLines.length > 0) {
         // First check if puzzle was solved by looking at last line
         const lastLine = gridLines[gridLines.length - 1];
@@ -239,32 +237,30 @@ const PuzzleScoreboard = () => {
           score = Math.max(1, score - missedLines);
         }
       }
-
+      
       gameScores.connections = score;
-      totalScore += score;
-      totalScore += score;
     }
     
     // Parse Strands
     if (text.includes('Strands')) {
-      gameScores.strands = 1;
-      totalScore++; // Base point
-      
       const lines = text.split('\n');
       const gridLines = lines.filter((line: string) => 
         line.includes('🔵') || line.includes('🟡')
       );
       
       if (gridLines.length > 0) {
+        gameScores.strands = 1;  // Base point
+        
         const firstRow = gridLines[0];
         const firstThreeSpots = firstRow.slice(0, 12);
         if (firstThreeSpots.includes('🟡')) {
-          totalScore++; // Bonus point
+          gameScores.strands++;  // Bonus point
           bonusPoints.strandsSpanagram = true;
         }
       }
     }
-
+  
+    const totalScore = gameScores.wordle + gameScores.connections + gameScores.strands;
     return { score: totalScore, bonusPoints, gameScores };
   };
 
