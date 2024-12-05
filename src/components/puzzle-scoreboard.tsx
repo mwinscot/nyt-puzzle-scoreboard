@@ -208,7 +208,7 @@ const PuzzleScoreboard = () => {
 
     // Parse Connections
     if (text.includes('Connections')) {
-      let score = 1; // Start with base score of 1
+      let score = 0;
       
       const lines = text.split('\n');
       const gridLines = lines.filter((line: string) => 
@@ -216,24 +216,32 @@ const PuzzleScoreboard = () => {
           line.includes('🟦') || line.includes('🟨')
       );
 
-      // Check if purple was solved first AND no mixed colors in first line
-      const firstLine = gridLines[0];
-      if (firstLine?.includes('🟪')) {
-          const hasRed = firstLine.includes('🟪');
-          const hasGreen = firstLine.includes('🟩');
-          const hasBlue = firstLine.includes('🟦');
-          const hasYellow = firstLine.includes('🟨');
+      if (gridLines.length > 0) {
+        // First check if puzzle was solved by looking at last line
+        const lastLine = gridLines[gridLines.length - 1];
+        const lastLineHasMixedColors = ['🟪', '🟩', '🟦', '🟨'].filter(color => 
+          lastLine.includes(color)
+        ).length > 1;
+        
+        // If puzzle was solved (last line not mixed)
+        if (!lastLineHasMixedColors) {
+          // Check if purple was first
+          const firstLine = gridLines[0];
+          score = firstLine && Array.from(firstLine).filter(char => char === '🟪').length === 4 ? 3 : 1;
           
-          const differentColors = [hasRed, hasGreen, hasBlue, hasYellow]
-              .filter(Boolean).length;
+          // Count missed lines (lines with mixed colors before the last line)
+          const missedLines = gridLines.slice(0, -1).filter(line => {
+            const colors = ['🟪', '🟩', '🟦', '🟨'].filter(color => line.includes(color));
+            return colors.length > 1;
+          }).length;
           
-          // Only give extra points if the first line is all purple
-          if (differentColors === 1 && hasRed) {
-              score = 3;
-          }
+          // Subtract points for missed lines, but maintain minimum of 1 point
+          score = Math.max(1, score - missedLines);
+        }
       }
 
       gameScores.connections = score;
+      totalScore += score;
       totalScore += score;
     }
     
