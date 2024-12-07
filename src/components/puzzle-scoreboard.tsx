@@ -1,4 +1,5 @@
 'use client';
+export {};
 
 import React, { useState, useEffect } from 'react';
 import { Trophy, Target, Puzzle, Brain, Star } from 'lucide-react';
