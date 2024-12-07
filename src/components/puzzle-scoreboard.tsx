@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Trophy, Target, Puzzle, Brain, Star } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import ScoreHistoryChart from './ScoreHistoryChart';
 
 interface TotalScoreHeaderProps {
   player1Score: number;
@@ -365,7 +366,7 @@ const PuzzleScoreboard = () => {
           player1Name={player1Name}
           player2Name={player2Name}
         />
-
+  
         <div className="space-y-6">
           {/* Player Selection */}
           <div className="flex space-x-4">
@@ -396,7 +397,7 @@ const PuzzleScoreboard = () => {
               Mike's Entry
             </button>
           </div>
-
+  
           {/* Results Input */}
           <div>
             <textarea
@@ -413,7 +414,7 @@ const PuzzleScoreboard = () => {
               }
             />
           </div>
-
+  
           {/* Submit and Clear Buttons */}
           <div className="flex justify-end space-x-4">
             <button
@@ -437,7 +438,7 @@ const PuzzleScoreboard = () => {
               Clear Input
             </button>
           </div>
-
+  
           {/* Finalize Day Button */}
           <div className="flex justify-center">
             <button
@@ -447,7 +448,7 @@ const PuzzleScoreboard = () => {
               Finalize Day's Scores
             </button>
           </div>
-
+  
           {/* Scoreboard */}
           <div className="grid grid-cols-2 gap-8">
             {/* Player 1 Scores */}
@@ -478,7 +479,7 @@ const PuzzleScoreboard = () => {
                 <span className="ml-2">Strands ({scores.player1.totalBonuses.strands})</span>
               </div>
             </div>
-
+  
             {/* Player 2 Scores */}
             <div className="space-y-4">
               <h3 className="text-xl font-bold">Mike</h3>
@@ -508,10 +509,12 @@ const PuzzleScoreboard = () => {
               </div>
             </div>
           </div>
+  
+          {/* Score History Chart */}
+          <ScoreHistoryChart scores={scores} />
         </div>
       </div>
     </div>
   );
-};
 
 export default PuzzleScoreboard;
