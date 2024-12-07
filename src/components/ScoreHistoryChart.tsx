@@ -47,14 +47,6 @@ interface ScoreHistoryChartProps {
   scores: PlayerScores;
 }
 
-interface ChartDataPoint {
-  date: string;
-  'Keith Total': number;
-  'Mike Total': number;
-  'Keith Daily': number;
-  'Mike Daily': number;
-}
-
 const ScoreHistoryChart: React.FC<ScoreHistoryChartProps> = ({ scores }) => {
   const chartData = useMemo(() => {
     // Get all dates from both players
