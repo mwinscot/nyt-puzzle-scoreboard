@@ -215,25 +215,24 @@ const PuzzleScoreboard = () => {
       );
   
       if (gridLines.length > 0) {
-        // First check if puzzle was solved by looking at last line
-        const lastLine = gridLines[gridLines.length - 1];
+        // Only proceed if we have enough attempts
+        const lastAttempt = gridLines[gridLines.length - 1];
         const lastLineHasMixedColors = ['🟪', '🟩', '🟦', '🟨'].filter(color => 
-          lastLine.includes(color)
+          lastAttempt.includes(color)
         ).length > 1;
-        
-        // If puzzle was solved (last line not mixed)
+  
+        // Only score if last attempt shows a completed group
         if (!lastLineHasMixedColors) {
           // Check if purple was first
           const firstLine = gridLines[0];
           score = firstLine && Array.from(firstLine).filter(char => char === '🟪').length === 4 ? 3 : 1;
           
-          // Count missed lines (lines with mixed colors before the last line)
+          // Count missed lines
           const missedLines = gridLines.slice(0, -1).filter(line => {
             const colors = ['🟪', '🟩', '🟦', '🟨'].filter(color => line.includes(color));
             return colors.length > 1;
           }).length;
           
-          // Subtract points for missed lines, but maintain minimum of 1 point
           score = Math.max(1, score - missedLines);
         }
       }
@@ -262,6 +261,12 @@ const PuzzleScoreboard = () => {
     }
   
     const totalScore = gameScores.wordle + gameScores.connections + gameScores.strands;
+    console.log('Score breakdown:', {
+      wordle: gameScores.wordle,
+      connections: gameScores.connections,
+      strands: gameScores.strands,
+      total: totalScore
+    });
     return { score: totalScore, bonusPoints, gameScores };
   };
 
