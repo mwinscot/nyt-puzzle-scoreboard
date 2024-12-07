@@ -191,7 +191,7 @@ const PuzzleScoreboard = () => {
       const wordleLines = text.split('\n');
       const scoreLine = wordleLines.find(line => line.includes('/6'));
       
-      if (scoreLine) {
+      if (scoreLine && !scoreLine.includes('X/6')) {  // Only score if solved (not X/6)
         gameScores.wordle = 1;  // Base point
         
         const guessMatch = scoreLine.match(/(\d+)\/6/);
@@ -208,7 +208,6 @@ const PuzzleScoreboard = () => {
     // Parse Connections
     if (text.includes('Connections')) {
       let score = 0;
-      
       const lines = text.split('\n');
       const gridLines = lines.filter((line: string) => 
           line.includes('🟪') || line.includes('🟩') || 
@@ -234,21 +233,27 @@ const PuzzleScoreboard = () => {
           }
         });
         
-        // Puzzle is only solved if the last line has exactly 4 of one color
+        // Puzzle is only solved if last line has all same color
         const isComplete = Object.values(colorCounts).some(count => count === 4);
   
         if (isComplete) {
-          // Check if purple was first
+          // Check if purple was first - this is a 3-point perfect game
           const firstLine = gridLines[0];
-          score = firstLine && Array.from(firstLine).filter(char => char === '🟪').length === 4 ? 3 : 1;
+          if (firstLine && Array.from(firstLine).filter(char => char === '🟪').length === 4) {
+            score = 3;  // Perfect game with purple first
+          } else {
+            score = 1;  // Normal completion
+          }
           
-          // Count missed lines
-          const missedLines = gridLines.slice(0, -1).filter(line => {
-            const colors = ['🟪', '🟩', '🟦', '🟨'].filter(color => line.includes(color));
-            return colors.length > 1;
-          }).length;
-          
-          score = Math.max(1, score - missedLines);
+          // If it wasn't a perfect game, check for missed lines
+          if (score === 1) {
+            const missedLines = gridLines.slice(0, -1).filter(line => {
+              const colors = ['🟪', '🟩', '🟦', '🟨'].filter(color => line.includes(color));
+              return colors.length > 1;
+            }).length;
+            
+            score = Math.max(1, score - missedLines);
+          }
         }
       }
       
