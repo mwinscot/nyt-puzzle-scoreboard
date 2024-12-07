@@ -217,12 +217,26 @@ const PuzzleScoreboard = () => {
       if (gridLines.length > 0) {
         // Only proceed if we have enough attempts
         const lastAttempt = gridLines[gridLines.length - 1];
-        const lastLineHasMixedColors = ['🟪', '🟩', '🟦', '🟨'].filter(color => 
-          lastAttempt.includes(color)
-        ).length > 1;
+        
+        // Check if last line is a complete group (all same color)
+        type ColorKey = '🟪' | '🟩' | '🟦' | '🟨';
+        const colorCounts: Record<ColorKey, number> = {
+          '🟪': 0,
+          '🟩': 0,
+          '🟦': 0,
+          '🟨': 0
+        };
+        
+        Array.from(lastAttempt).forEach(char => {
+          if (char in colorCounts) {
+            colorCounts[char as ColorKey]++;
+          }
+        });
+        
+        // Puzzle is only solved if the last line has exactly 4 of one color
+        const isComplete = Object.values(colorCounts).some(count => count === 4);
   
-        // Only score if last attempt shows a completed group
-        if (!lastLineHasMixedColors) {
+        if (isComplete) {
           // Check if purple was first
           const firstLine = gridLines[0];
           score = firstLine && Array.from(firstLine).filter(char => char === '🟪').length === 4 ? 3 : 1;
