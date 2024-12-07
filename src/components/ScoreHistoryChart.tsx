@@ -1,5 +1,4 @@
 'use client';
-export {};
 
 import React, { useMemo } from 'react';
 import {
@@ -48,6 +47,34 @@ interface ScoreHistoryChartProps {
   scores: PlayerScores;
 }
 
+interface TooltipPayloadItem {
+  name: string;
+  value: number;
+  color: string;
+}
+
+interface CustomTooltipProps {
+  active?: boolean;
+  payload?: TooltipPayloadItem[];
+  label?: string;
+}
+
+const CustomTooltip: React.FC<CustomTooltipProps> = ({ active, payload, label }) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-white p-4 border rounded shadow">
+        <p className="font-bold mb-2">{label}</p>
+        {payload.map((entry: TooltipPayloadItem, index: number) => (
+          <p key={index} style={{ color: entry.color }}>
+            {entry.name}: {entry.value}
+          </p>
+        ))}
+      </div>
+    );
+  }
+  return null;
+};
+
 const ScoreHistoryChart: React.FC<ScoreHistoryChartProps> = ({ scores }) => {
   const chartData = useMemo(() => {
     // Get all dates from both players
@@ -64,18 +91,36 @@ const ScoreHistoryChart: React.FC<ScoreHistoryChartProps> = ({ scores }) => {
     let player2RunningTotal = 0;
 
     return sortedDates.map(date => {
-      const p1DayScore = scores.player1.dailyScores[date]?.total || 0;
-      const p2DayScore = scores.player2.dailyScores[date]?.total || 0;
+      // Get daily scores for each player
+      const p1DailyScore = scores.player1.dailyScores[date]?.total || 0;
+      const p2DailyScore = scores.player2.dailyScores[date]?.total || 0;
       
-      player1RunningTotal += p1DayScore;
-      player2RunningTotal += p2DayScore;
+      // Get individual game scores
+      const p1Wordle = scores.player1.dailyScores[date]?.wordle || 0;
+      const p1Connections = scores.player1.dailyScores[date]?.connections || 0;
+      const p1Strands = scores.player1.dailyScores[date]?.strands || 0;
+      
+      const p2Wordle = scores.player2.dailyScores[date]?.wordle || 0;
+      const p2Connections = scores.player2.dailyScores[date]?.connections || 0;
+      const p2Strands = scores.player2.dailyScores[date]?.strands || 0;
+      
+      // Update running totals
+      player1RunningTotal += p1DailyScore;
+      player2RunningTotal += p2DailyScore;
 
       return {
         date,
         'Keith Total': player1RunningTotal,
         'Mike Total': player2RunningTotal,
-        'Keith Daily': p1DayScore,
-        'Mike Daily': p2DayScore,
+        'Keith Daily': p1DailyScore,
+        'Mike Daily': p2DailyScore,
+        // Individual game scores
+        'Keith Wordle': p1Wordle,
+        'Keith Connections': p1Connections,
+        'Keith Strands': p1Strands,
+        'Mike Wordle': p2Wordle,
+        'Mike Connections': p2Connections,
+        'Mike Strands': p2Strands,
       };
     });
   }, [scores]);
@@ -93,8 +138,10 @@ const ScoreHistoryChart: React.FC<ScoreHistoryChartProps> = ({ scores }) => {
               interval="preserveStartEnd"
             />
             <YAxis />
-            <Tooltip />
+            <Tooltip content={<CustomTooltip />} />
             <Legend />
+            
+            {/* Running Totals - Main solid lines */}
             <Line
               type="monotone"
               dataKey="Keith Total"
@@ -109,6 +156,8 @@ const ScoreHistoryChart: React.FC<ScoreHistoryChartProps> = ({ scores }) => {
               strokeWidth={2}
               dot={false}
             />
+
+            {/* Daily Totals - Dashed lines */}
             <Line
               type="monotone"
               dataKey="Keith Daily"
@@ -122,6 +171,58 @@ const ScoreHistoryChart: React.FC<ScoreHistoryChartProps> = ({ scores }) => {
               stroke="#fca5a5"
               strokeWidth={1}
               strokeDasharray="5 5"
+            />
+
+            {/* Individual Game Scores - Keith */}
+            <Line
+              type="monotone"
+              dataKey="Keith Wordle"
+              stroke="#60a5fa"
+              strokeWidth={1}
+              dot={true}
+              opacity={0.5}
+            />
+            <Line
+              type="monotone"
+              dataKey="Keith Connections"
+              stroke="#3b82f6"
+              strokeWidth={1}
+              dot={true}
+              opacity={0.5}
+            />
+            <Line
+              type="monotone"
+              dataKey="Keith Strands"
+              stroke="#1d4ed8"
+              strokeWidth={1}
+              dot={true}
+              opacity={0.5}
+            />
+
+            {/* Individual Game Scores - Mike */}
+            <Line
+              type="monotone"
+              dataKey="Mike Wordle"
+              stroke="#f87171"
+              strokeWidth={1}
+              dot={true}
+              opacity={0.5}
+            />
+            <Line
+              type="monotone"
+              dataKey="Mike Connections"
+              stroke="#ef4444"
+              strokeWidth={1}
+              dot={true}
+              opacity={0.5}
+            />
+            <Line
+              type="monotone"
+              dataKey="Mike Strands"
+              stroke="#b91c1c"
+              strokeWidth={1}
+              dot={true}
+              opacity={0.5}
             />
           </LineChart>
         </ResponsiveContainer>
