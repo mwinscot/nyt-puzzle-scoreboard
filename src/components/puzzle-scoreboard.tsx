@@ -334,6 +334,8 @@ if (text.includes('Strands')) {
   };
 
   // ... (fetchAllScores and other functions remain the same, just update player mapping)
+  const CONTEST_START_DATE = '2023-12-10';
+  
   const fetchAllScores = async () => {
     try {
       const { data: scoresData, error } = await supabase
@@ -343,7 +345,8 @@ if (text.includes('Strands')) {
           players (
             name
           )
-        `);
+        `)
+        .gte('date', CONTEST_START_DATE); // Only fetch scores from contest start date
   
       if (error) throw error;
   
