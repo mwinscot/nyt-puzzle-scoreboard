@@ -156,65 +156,80 @@ const PuzzleScoreboard: React.FC = () => {
       }
     }
   
-    // Updated Connections scoring
-    if (text.includes('Connections')) {
-      let score = 0;
-      const lines = text.split('\n');
-      const gridLines = lines.filter((line: string) => 
-          line.includes('🟪') || line.includes('🟩') || 
-          line.includes('🟦') || line.includes('🟨')
-      );
+// Parse Connections
+if (text.includes('Connections')) {
+  console.log('Parsing Connections...');
+  let score = 0;
+  const lines = text.split('\n');
+  console.log('All lines:', lines);
   
-      if (gridLines.length > 0) {
-        const lastAttempt = gridLines[gridLines.length - 1];
-        
-        // Check if puzzle is completed
-        type ColorKey = '🟪' | '🟩' | '🟦' | '🟨';
-        const colorCounts: Record<ColorKey, number> = {
-          '🟪': 0,
-          '🟩': 0,
-          '🟦': 0,
-          '🟨': 0
-        };
-        
-        Array.from(lastAttempt).forEach(char => {
-          if (char in colorCounts) {
-            colorCounts[char as ColorKey]++;
-          }
-        });
-        
-        const isComplete = Object.values(colorCounts).some(count => count === 4);
-  
-        if (isComplete) {
-          // Check if there were any errors
-          const hasErrors = gridLines.slice(0, -1).some(line => {
-            const colors = ['🟪', '🟩', '🟦', '🟨'].filter(color => line.includes(color));
-            return colors.length > 1;
-          });
+  const gridLines = lines.filter((line: string) => 
+      line.includes('🟪') || line.includes('🟩') || 
+      line.includes('🟦') || line.includes('🟨')
+  );
+  console.log('Grid lines:', gridLines);
 
-          // Check if purple was first
-          const firstLine = gridLines[0];
-          const purpleFirst = firstLine && Array.from(firstLine).filter(char => char === '🟪').length === 4;
+  if (gridLines.length > 0) {
+    const lastAttempt = gridLines[gridLines.length - 1];
+    console.log('Last attempt:', lastAttempt);
+    
+    // Check if puzzle is completed
+    type ColorKey = '🟪' | '🟩' | '🟦' | '🟨';
+    const colorCounts: Record<ColorKey, number> = {
+      '🟪': 0,
+      '🟩': 0,
+      '🟦': 0,
+      '🟨': 0
+    };
+    
+    Array.from(lastAttempt).forEach(char => {
+      if (char in colorCounts) {
+        colorCounts[char as ColorKey]++;
+      }
+    });
+    console.log('Color counts:', colorCounts);
+    
+    const isComplete = Object.values(colorCounts).some(count => count === 4);
+    console.log('Is complete:', isComplete);
 
-          if (purpleFirst) {
-            if (!hasErrors) {
-              score = 3; // Purple first, no errors
-              bonusPoints.connectionsPerfect = true;
-            } else {
-              score = 2; // Purple first, but with errors
-            }
-          } else {
-            if (!hasErrors) {
-              score = 2; // No errors, but purple wasn't first
-            } else {
-              score = 1; // Completed with errors
-            }
-          }
+    if (isComplete) {
+      // Check if there were any errors
+      const hasErrors = gridLines.slice(0, -1).some(line => {
+        const colors = ['🟪', '🟩', '🟦', '🟨'].filter(color => line.includes(color));
+        return colors.length > 1;
+      });
+      console.log('Has errors:', hasErrors);
+
+      // Check if purple was first
+      const firstLine = gridLines[0];
+      console.log('First line:', firstLine);
+      const purpleFirst = firstLine && Array.from(firstLine).filter(char => char === '🟪').length === 4;
+      console.log('Purple first:', purpleFirst);
+
+      if (purpleFirst) {
+        if (!hasErrors) {
+          score = 3; // Purple first, no errors
+          bonusPoints.connectionsPerfect = true;
+          console.log('Perfect game! Score:', score);
+        } else {
+          score = 2; // Purple first, but with errors
+          console.log('Purple first but with errors. Score:', score);
+        }
+      } else {
+        if (!hasErrors) {
+          score = 2; // No errors, but purple wasn't first
+          console.log('No errors but purple not first. Score:', score);
+        } else {
+          score = 1; // Completed with errors
+          console.log('Completed with errors. Score:', score);
         }
       }
-      
-      gameScores.connections = score;
     }
+  }
+  
+  gameScores.connections = score;
+  console.log('Final connections score:', score);
+}
     
     // Parse Strands (unchanged)
     if (text.includes('Strands')) {
@@ -236,8 +251,8 @@ const PuzzleScoreboard: React.FC = () => {
     }
   
     const totalScore = gameScores.wordle + gameScores.connections + gameScores.strands;
-    return { score: totalScore, bonusPoints, gameScores };
-  };
+    return { score: gameScores.wordle + gameScores.connections + gameScores.strands, bonusPoints, gameScores };
+};
 
   const canEditDate = (date: string, scores: PlayerScores): boolean => {
     const playerScores = [
