@@ -238,57 +238,47 @@ const PuzzleScoreboard: React.FC = () => {
     }
     
     // Parse Strands
-    if (text.includes('Strands')) {
-      console.log('=== STRANDS DEBUGGING ===');
-      console.log('Full input text:', text);
+if (text.includes('Strands')) {
+  console.log('=== STRANDS DEBUGGING ===');
+  const lines = text.split('\n');
+  const strandsStartIndex = lines.findIndex(line => line.trim().startsWith('Strands'));
+  
+  if (strandsStartIndex !== -1) {
+    const strandsLines = lines.slice(strandsStartIndex);
+    
+    // Find grid lines (with emojis)
+    const gridLines = strandsLines.filter(line => 
+      line.includes('🔵') || line.includes('🟡')
+    );
+    
+    console.log('Found grid lines:', gridLines);
+
+    if (gridLines.length > 0) {
+      // Base point for completion
+      gameScores.strands = 1;
+      console.log('Setting base strands score to 1');
       
-      const lines = text.split('\n');
-      console.log('All lines after split:', lines);
+      // Check for spanagram bonus
+      // FIXED: Only look at first three actual moves
+      const firstThree = gridLines.slice(0, 3);
+      console.log('First three moves:', firstThree);
       
-      // Find Strands section
-      const strandsStartIndex = lines.findIndex(line => line.trim().startsWith('Strands'));
-      console.log('Strands start index:', strandsStartIndex);
-
-      if (strandsStartIndex !== -1) {
-        // Get all lines after "Strands"
-        const strandsLines = lines.slice(strandsStartIndex);
-        console.log('Lines after Strands:', strandsLines);
-
-        // Find grid lines (with emojis)
-        const gridLines = strandsLines.filter(line => {
-          const hasEmoji = line.includes('🔵') || line.includes('🟡');
-          console.log('Checking line for emoji:', line, hasEmoji);
-          return hasEmoji;
-        });
-        
-        console.log('Found grid lines:', gridLines);
-        console.log('Number of grid lines:', gridLines.length);
-
-        if (gridLines.length > 0) {
-          // Base point for completion
-          gameScores.strands = 1;
-          console.log('Setting base strands score to 1');
-          
-          // Check for spanagram bonus
-          const firstThreeLines = gridLines.slice(0, 3);
-          const foundSpanagramEarly = firstThreeLines.some(line => line.includes('🟡'));
-          
-          if (foundSpanagramEarly) {
-            gameScores.strands++;
-            bonusPoints.strandsSpanagram = true;
-            console.log('Added spanagram bonus point');
-          }
-        } else {
-          console.log('No grid lines found - score remains 0');
-        }
+      // Check if any of first three moves has a yellow circle
+      const foundSpanagramEarly = firstThree.some(line => 
+        line.includes('🟡')
+      );
+      
+      if (foundSpanagramEarly) {
+        gameScores.strands++;
+        bonusPoints.strandsSpanagram = true;
+        console.log('Added spanagram bonus point');
       } else {
-        console.log('Could not find start of Strands section');
+        console.log('No early spanagram found - no bonus point');
       }
-      
-      console.log('Final Strands score:', gameScores.strands);
-    } else {
-      console.log('No Strands section found in text');
     }
+  }
+  console.log('Final Strands score:', gameScores.strands);
+}
 
     const totalScore = gameScores.wordle + gameScores.connections + gameScores.strands;
     console.log('Final totals:', { 
