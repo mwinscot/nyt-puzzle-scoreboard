@@ -239,30 +239,64 @@ const PuzzleScoreboard: React.FC = () => {
     
     // Parse Strands
     if (text.includes('Strands')) {
-      const strandsStartIndex = lines.findIndex(line => line.trim() === 'Strands');
+      console.log('Parsing Strands...');
+      const lines = text.split('\n');
+      const strandsStartIndex = lines.findIndex(line => line.includes('Strands'));
+      console.log('Strands start index:', strandsStartIndex);
+
       if (strandsStartIndex !== -1) {
+        // Get Strands section
         const strandsLines = lines.slice(strandsStartIndex);
-        const gridLines = strandsLines.filter((line: string) => 
-          line.includes('🔵') || line.includes('🟡')
+        console.log('Strands section lines:', strandsLines);
+
+        // Find the next puzzle start or end of text
+        const nextPuzzleIndex = strandsLines.findIndex((line, i) => 
+          i > 0 && (line.includes('Wordle') || line.includes('Connections'))
         );
         
+        const strandsSection = nextPuzzleIndex !== -1 
+          ? strandsLines.slice(0, nextPuzzleIndex)
+          : strandsLines;
+        
+        console.log('Processed Strands section:', strandsSection);
+
+        const gridLines = strandsSection.filter((line: string) => 
+          line.includes('🔵') || line.includes('🟡')
+        );
+        console.log('Grid lines found:', gridLines);
+        
         if (gridLines.length > 0) {
+          // Base point for completion
           gameScores.strands = 1;
+          console.log('Awarded base point for completion');
           
-          const firstRow = gridLines[0];
-          const firstThreeEmoji = Array.from(firstRow)
-            .filter(char => char === '🔵' || char === '🟡')
-            .slice(0, 3);
-          if (firstThreeEmoji.includes('🟡')) {
+          // Check for spanagram bonus
+          const firstThreeLines = gridLines.slice(0, 3);
+          console.log('First three lines:', firstThreeLines);
+          
+          const foundSpanagramEarly = firstThreeLines.some(line => 
+            Array.from(line).some(char => char === '🟡')
+          );
+          
+          if (foundSpanagramEarly) {
             gameScores.strands++;
             bonusPoints.strandsSpanagram = true;
+            console.log('Awarded spanagram bonus point');
           }
         }
+        
+        console.log('Final Strands score:', gameScores.strands);
       }
     }
 
     const totalScore = gameScores.wordle + gameScores.connections + gameScores.strands;
-    console.log('Final scores:', gameScores, 'Total:', totalScore);
+    console.log('Final totals:', { 
+      wordle: gameScores.wordle, 
+      connections: gameScores.connections, 
+      strands: gameScores.strands, 
+      total: totalScore 
+    });
+    
     return { score: totalScore, bonusPoints, gameScores };
 };
 
