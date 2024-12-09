@@ -41,6 +41,7 @@ interface PlayerData {
 interface PlayerScores {
   player1: PlayerData;
   player2: PlayerData;
+  player3: PlayerData;  // Added this line
 }
 
 interface ScoreHistoryChartProps {
@@ -77,10 +78,11 @@ const CustomTooltip: React.FC<CustomTooltipProps> = ({ active, payload, label })
 
 const ScoreHistoryChart: React.FC<ScoreHistoryChartProps> = ({ scores }) => {
   const chartData = useMemo(() => {
-    // Get all dates from both players
+    // Get all dates from all players
     const allDates = new Set([
       ...Object.keys(scores.player1.dailyScores),
-      ...Object.keys(scores.player2.dailyScores)
+      ...Object.keys(scores.player2.dailyScores),
+      ...Object.keys(scores.player3.dailyScores)
     ]);
 
     // Convert to array and sort chronologically
@@ -89,11 +91,13 @@ const ScoreHistoryChart: React.FC<ScoreHistoryChartProps> = ({ scores }) => {
     // Calculate running totals for each date
     let player1RunningTotal = 0;
     let player2RunningTotal = 0;
+    let player3RunningTotal = 0;
 
     return sortedDates.map(date => {
       // Get daily scores for each player
       const p1DailyScore = scores.player1.dailyScores[date]?.total || 0;
       const p2DailyScore = scores.player2.dailyScores[date]?.total || 0;
+      const p3DailyScore = scores.player3.dailyScores[date]?.total || 0;
       
       // Get individual game scores
       const p1Wordle = scores.player1.dailyScores[date]?.wordle || 0;
@@ -103,17 +107,24 @@ const ScoreHistoryChart: React.FC<ScoreHistoryChartProps> = ({ scores }) => {
       const p2Wordle = scores.player2.dailyScores[date]?.wordle || 0;
       const p2Connections = scores.player2.dailyScores[date]?.connections || 0;
       const p2Strands = scores.player2.dailyScores[date]?.strands || 0;
+
+      const p3Wordle = scores.player3.dailyScores[date]?.wordle || 0;
+      const p3Connections = scores.player3.dailyScores[date]?.connections || 0;
+      const p3Strands = scores.player3.dailyScores[date]?.strands || 0;
       
       // Update running totals
       player1RunningTotal += p1DailyScore;
       player2RunningTotal += p2DailyScore;
+      player3RunningTotal += p3DailyScore;
 
       return {
         date,
         'Keith Total': player1RunningTotal,
         'Mike Total': player2RunningTotal,
+        'Colleen Total': player3RunningTotal,
         'Keith Daily': p1DailyScore,
         'Mike Daily': p2DailyScore,
+        'Colleen Daily': p3DailyScore,
         // Individual game scores
         'Keith Wordle': p1Wordle,
         'Keith Connections': p1Connections,
@@ -121,6 +132,9 @@ const ScoreHistoryChart: React.FC<ScoreHistoryChartProps> = ({ scores }) => {
         'Mike Wordle': p2Wordle,
         'Mike Connections': p2Connections,
         'Mike Strands': p2Strands,
+        'Colleen Wordle': p3Wordle,
+        'Colleen Connections': p3Connections,
+        'Colleen Strands': p3Strands,
       };
     });
   }, [scores]);
@@ -156,6 +170,13 @@ const ScoreHistoryChart: React.FC<ScoreHistoryChartProps> = ({ scores }) => {
               strokeWidth={2}
               dot={false}
             />
+            <Line
+              type="monotone"
+              dataKey="Colleen Total"
+              stroke="#047857"
+              strokeWidth={2}
+              dot={false}
+            />
 
             {/* Daily Totals - Dashed lines */}
             <Line
@@ -169,6 +190,13 @@ const ScoreHistoryChart: React.FC<ScoreHistoryChartProps> = ({ scores }) => {
               type="monotone"
               dataKey="Mike Daily"
               stroke="#fca5a5"
+              strokeWidth={1}
+              strokeDasharray="5 5"
+            />
+            <Line
+              type="monotone"
+              dataKey="Colleen Daily"
+              stroke="#34d399"
               strokeWidth={1}
               strokeDasharray="5 5"
             />
@@ -220,6 +248,32 @@ const ScoreHistoryChart: React.FC<ScoreHistoryChartProps> = ({ scores }) => {
               type="monotone"
               dataKey="Mike Strands"
               stroke="#b91c1c"
+              strokeWidth={1}
+              dot={true}
+              opacity={0.5}
+            />
+
+            {/* Individual Game Scores - Colleen */}
+            <Line
+              type="monotone"
+              dataKey="Colleen Wordle"
+              stroke="#6ee7b7"
+              strokeWidth={1}
+              dot={true}
+              opacity={0.5}
+            />
+            <Line
+              type="monotone"
+              dataKey="Colleen Connections"
+              stroke="#10b981"
+              strokeWidth={1}
+              dot={true}
+              opacity={0.5}
+            />
+            <Line
+              type="monotone"
+              dataKey="Colleen Strands"
+              stroke="#047857"
               strokeWidth={1}
               dot={true}
               opacity={0.5}
