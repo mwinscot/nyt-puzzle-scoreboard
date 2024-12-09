@@ -237,64 +237,45 @@ const PuzzleScoreboard: React.FC = () => {
       }
     }
     
-  // Parse Strands
-  if (text.includes('Strands')) {
-    console.log('=== STRANDS DEBUGGING ===');
-    console.log('Raw input text:', JSON.stringify(text));
+// Parse Strands
+if (text.includes('Strands')) {
+  console.log('=== STRANDS DEBUGGING ===');
+  const lines = text.split('\n');
+  const strandsStartIndex = lines.findIndex(line => line.trim().startsWith('Strands'));
+  
+  if (strandsStartIndex !== -1) {
+    const strandsLines = lines.slice(strandsStartIndex);
     
-    const lines = text.split('\n');
-    console.log('All lines:', lines.map(line => JSON.stringify(line)));
+    // Find grid lines (with emojis)
+    const gridLines = strandsLines.filter(line => 
+      line.includes('🔵') || line.includes('🟡')
+    );
     
-    const strandsStartIndex = lines.findIndex(line => line.trim().startsWith('Strands'));
-    console.log('Strands start index:', strandsStartIndex);
-    
-    if (strandsStartIndex !== -1) {
-      const strandsLines = lines.slice(strandsStartIndex);
-      console.log('Lines after Strands start:', strandsLines.map(line => JSON.stringify(line)));
-      
-      // Only count lines that actually have moves (circles)
-      const gridLines = strandsLines.filter(line => {
-        const hasMove = line.includes('🔵') || line.includes('🟡');
-        console.log('Line:', JSON.stringify(line), 'Has move:', hasMove);
-        return hasMove;
-      });
-      
-      console.log('Found game moves:', gridLines.map(line => JSON.stringify(line)));
-      console.log('Number of moves:', gridLines.length);
+    console.log('Found grid lines:', gridLines);
 
-      if (gridLines.length > 0) {
-        // Base point for completion
-        gameScores.strands = 1;
-        console.log('Base point awarded');
-        
-        // Check first three MOVES for spanagram
-        const firstThreeMoves = gridLines.slice(0, 3);
-        console.log('First three moves:', firstThreeMoves.map(line => JSON.stringify(line)));
-        
-        firstThreeMoves.forEach((move, i) => {
-          console.log(`Move ${i + 1} has yellow?`, move.includes('🟡'));
-        });
-        
-        const hasEarlySpanagram = firstThreeMoves.some((move, i) => {
-          const hasYellow = move.includes('🟡');
-          console.log(`Checking move ${i + 1} for yellow:`, hasYellow);
-          return hasYellow;
-        });
-        
-        console.log('Found early spanagram?', hasEarlySpanagram);
-        
-        if (hasEarlySpanagram) {
-          console.log('Adding spanagram bonus point');
-          gameScores.strands++;
-          bonusPoints.strandsSpanagram = true;
-        } else {
-          console.log('No spanagram bonus awarded');
-        }
+    if (gridLines.length > 0) {
+      // Base point for completion
+      gameScores.strands = 1;
+      console.log('Setting base strands score to 1');
+      
+      // Check for spanagram bonus - ONLY in first line
+      const firstLine = gridLines[0];
+      console.log('First line:', firstLine);
+      
+      // Check if first line has a yellow circle
+      const foundSpanagramInFirstMove = firstLine.includes('🟡');
+      
+      if (foundSpanagramInFirstMove) {
+        gameScores.strands++;
+        bonusPoints.strandsSpanagram = true;
+        console.log('Added spanagram bonus point');
+      } else {
+        console.log('No early spanagram - no bonus point');
       }
     }
-    
-    console.log('Final Strands score:', gameScores.strands);
   }
+  console.log('Final Strands score:', gameScores.strands);
+}
 
   const totalScore = gameScores.wordle + gameScores.connections + gameScores.strands;
   console.log('Final total score breakdown:', {
