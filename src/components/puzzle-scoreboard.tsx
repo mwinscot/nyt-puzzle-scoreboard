@@ -239,54 +239,55 @@ const PuzzleScoreboard: React.FC = () => {
     
     // Parse Strands
     if (text.includes('Strands')) {
-      console.log('Parsing Strands...');
+      console.log('=== STRANDS DEBUGGING ===');
+      console.log('Full input text:', text);
+      
       const lines = text.split('\n');
-      const strandsStartIndex = lines.findIndex(line => line.includes('Strands'));
+      console.log('All lines after split:', lines);
+      
+      // Find Strands section
+      const strandsStartIndex = lines.findIndex(line => line.trim().startsWith('Strands'));
       console.log('Strands start index:', strandsStartIndex);
 
       if (strandsStartIndex !== -1) {
-        // Get Strands section
+        // Get all lines after "Strands"
         const strandsLines = lines.slice(strandsStartIndex);
-        console.log('Strands section lines:', strandsLines);
+        console.log('Lines after Strands:', strandsLines);
 
-        // Find the next puzzle start or end of text
-        const nextPuzzleIndex = strandsLines.findIndex((line, i) => 
-          i > 0 && (line.includes('Wordle') || line.includes('Connections'))
-        );
+        // Find grid lines (with emojis)
+        const gridLines = strandsLines.filter(line => {
+          const hasEmoji = line.includes('🔵') || line.includes('🟡');
+          console.log('Checking line for emoji:', line, hasEmoji);
+          return hasEmoji;
+        });
         
-        const strandsSection = nextPuzzleIndex !== -1 
-          ? strandsLines.slice(0, nextPuzzleIndex)
-          : strandsLines;
-        
-        console.log('Processed Strands section:', strandsSection);
+        console.log('Found grid lines:', gridLines);
+        console.log('Number of grid lines:', gridLines.length);
 
-        const gridLines = strandsSection.filter((line: string) => 
-          line.includes('🔵') || line.includes('🟡')
-        );
-        console.log('Grid lines found:', gridLines);
-        
         if (gridLines.length > 0) {
           // Base point for completion
           gameScores.strands = 1;
-          console.log('Awarded base point for completion');
+          console.log('Setting base strands score to 1');
           
           // Check for spanagram bonus
           const firstThreeLines = gridLines.slice(0, 3);
-          console.log('First three lines:', firstThreeLines);
-          
-          const foundSpanagramEarly = firstThreeLines.some(line => 
-            Array.from(line).some(char => char === '🟡')
-          );
+          const foundSpanagramEarly = firstThreeLines.some(line => line.includes('🟡'));
           
           if (foundSpanagramEarly) {
             gameScores.strands++;
             bonusPoints.strandsSpanagram = true;
-            console.log('Awarded spanagram bonus point');
+            console.log('Added spanagram bonus point');
           }
+        } else {
+          console.log('No grid lines found - score remains 0');
         }
-        
-        console.log('Final Strands score:', gameScores.strands);
+      } else {
+        console.log('Could not find start of Strands section');
       }
+      
+      console.log('Final Strands score:', gameScores.strands);
+    } else {
+      console.log('No Strands section found in text');
     }
 
     const totalScore = gameScores.wordle + gameScores.connections + gameScores.strands;
@@ -416,10 +417,15 @@ const PuzzleScoreboard: React.FC = () => {
   const handleSubmit = async () => {
     if (!currentEntry || !inputText) return;
   
+    // Calculate scores first
     const { score, bonusPoints, gameScores } = calculateScores(inputText);
     
     try {
-      const playerName = getPlayerNameFromKey(currentEntry);
+      // Get player name based on currentEntry
+      const playerName = currentEntry === 'player1' ? 'Keith' : 
+                        currentEntry === 'player2' ? 'Mike' : 'Colleen';
+      
+      console.log('Submitting scores:', { gameScores, totalScore: score, bonusPoints });
   
       const { data: player, error: playerError } = await supabase
         .from('players')
@@ -446,6 +452,7 @@ const PuzzleScoreboard: React.FC = () => {
   
       if (scoreError) throw scoreError;
   
+      // Refresh scores after successful submission
       await fetchAllScores();
       setInputText('');
       setCurrentEntry(null);
