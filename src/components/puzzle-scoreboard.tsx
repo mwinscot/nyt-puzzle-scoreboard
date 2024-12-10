@@ -1,8 +1,29 @@
 import React, { useState, useEffect } from 'react';
-import { Trophy, Target, Puzzle, Brain, Star } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { Session, User, SupabaseClient } from '@supabase/supabase-js';
+import { AuthChangeEvent } from '@supabase/supabase-js';
+import { supabase, publicSupabase, Database } from '@/lib/supabase';
+import { AdminAuth } from './AdminAuth';
 import ScoreHistoryChart from './ScoreHistoryChart';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Trophy, Target, Puzzle, Brain, Star } from 'lucide-react';
+
+  interface ScoreRecord {
+    id: number;
+    date: string;
+    player_id: number;
+    wordle: number;
+    connections: number;
+    strands: number;
+    total: number;
+    bonus_wordle: boolean;
+    bonus_connections: boolean;
+    bonus_strands: boolean;
+    finalized: boolean;
+    created_at?: string;
+    players: {
+      name: string;
+    };
+  }
 
 interface TotalScoreHeaderProps {
   player1Score: number;
@@ -112,12 +133,29 @@ const TotalScoreHeader: React.FC<TotalScoreHeaderProps> = ({
   );
 };
 
+const ScoreCard: React.FC<ScoreCardProps> = ({ title, score, icon: Icon, bonusCount }) => (
+  <div className="flex items-center space-x-2 p-4 bg-gray-100 rounded-lg">
+    <Icon className="w-6 h-6 text-blue-600" />
+    <div className="flex-1">
+      <div className="text-sm text-gray-800">{title}</div>
+      <div className="text-xl font-bold text-gray-900">{score}</div>
+    </div>
+    {bonusCount !== undefined && bonusCount > 0 && (
+      <div className="flex items-center text-yellow-600">
+        <Star className="w-4 h-4" />
+        <span className="ml-1 text-gray-900">{bonusCount}</span>
+      </div>
+    )}
+  </div>
+);
+
 const PuzzleScoreboard: React.FC = () => {
+  const [isAdmin, setIsAdmin] = useState(false);
   const [player1Name, setPlayer1Name] = useState<string>('Keith');
   const [player2Name, setPlayer2Name] = useState<string>('Mike');
   const [player3Name, setPlayer3Name] = useState<string>('Colleen');
   const [inputText, setInputText] = useState<string>('');
-  const [currentEntry, setCurrentEntry] = useState<'player1' | 'player2' | 'player3' | null>(null);
+  const [currentEntry, setCurrentEntry] = useState<PlayerKey | null>(null);
   const [currentDate, setCurrentDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [scores, setScores] = useState<PlayerScores>({
     player1: initialPlayerData(),
@@ -125,99 +163,49 @@ const PuzzleScoreboard: React.FC = () => {
     player3: initialPlayerData()
   });
 
-  const calculateScores = (text: string): { score: number, bonusPoints: BonusPoints, gameScores: { wordle: number, connections: number, strands: number } } => {
+  useEffect(() => {
+    // Check if user is already authenticated
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setIsAdmin(!!session);
+    };
+    
+    checkAuth();
+
+  // Update the auth state change handler
+  const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    setIsAdmin(!!session);
+  });
+
+  fetchAllScores();
+
+  return () => {
+    subscription.unsubscribe();
+  };
+}, []);
+
+  const calculateScores = (text: string): { 
+    score: number, 
+    bonusPoints: BonusPoints, 
+    gameScores: { 
+      wordle: number, 
+      connections: number, 
+      strands: number 
+    } 
+  } => {
+    // Your existing calculateScores function implementation
     const bonusPoints: BonusPoints = {
       wordleQuick: false,
       connectionsPerfect: false,
       strandsSpanagram: false
     };
+    
     const gameScores = {
       wordle: 0,
       connections: 0,
       strands: 0
     };
-  
-    // Split the text into sections for each puzzle
-    const lines = text.split('\n');
-    
-    // Parse Connections
-    if (text.includes('Connections')) {
-      let score = 0;
-      // Find the Connections section
-      const connectionsStartIndex = lines.findIndex(line => line.trim() === 'Connections');
-      if (connectionsStartIndex !== -1) {
-        // Get only the lines related to Connections until the next puzzle or end
-        const connectionsLines = lines.slice(connectionsStartIndex);
-        const nextPuzzleIndex = connectionsLines.findIndex((line, i) => 
-          i > 0 && (line.includes('Wordle') || line.includes('Strands'))
-        );
-        
-        const connectionSection = nextPuzzleIndex !== -1 
-          ? connectionsLines.slice(0, nextPuzzleIndex)
-          : connectionsLines;
 
-        console.log('Connections section:', connectionSection);
-        
-        // Filter for grid lines
-        const gridLines = connectionSection.filter((line: string) => 
-          line.includes('🟪') || line.includes('🟩') || 
-          line.includes('🟦') || line.includes('🟨')
-        );
-        console.log('Grid lines:', gridLines);
-
-        if (gridLines.length > 0) {
-          const lastAttempt = gridLines[gridLines.length - 1];
-          
-          // Check if puzzle is completed
-          type ColorKey = '🟪' | '🟩' | '🟦' | '🟨';
-          const colorCounts: Record<ColorKey, number> = {
-            '🟪': 0,
-            '🟩': 0,
-            '🟦': 0,
-            '🟨': 0
-          };
-          
-          Array.from(lastAttempt).forEach(char => {
-            if (char in colorCounts) {
-              colorCounts[char as ColorKey]++;
-            }
-          });
-          
-          const isComplete = Object.values(colorCounts).some(count => count === 4);
-
-          if (isComplete) {
-            // Check if there were any errors
-            const hasErrors = gridLines.slice(0, -1).some(line => {
-              const colors = ['🟪', '🟩', '🟦', '🟨'].filter(color => line.includes(color));
-              return colors.length > 1;
-            });
-
-            // Check if purple was first
-            const firstLine = gridLines[0];
-            const purpleFirst = firstLine && Array.from(firstLine).filter(char => char === '🟪').length === 4;
-
-            if (purpleFirst) {
-              if (!hasErrors) {
-                score = 3; // Purple first, no errors
-                bonusPoints.connectionsPerfect = true;
-              } else {
-                score = 2; // Purple first, but with errors
-              }
-            } else {
-              if (!hasErrors) {
-                score = 2; // No errors, but purple wasn't first
-              } else {
-                score = 1; // Completed with errors
-              }
-            }
-          }
-        }
-        
-        gameScores.connections = score;
-        console.log('Final connections score:', score);
-      }
-    }
-  
     // Parse Wordle
     if (text.includes('Wordle')) {
       const wordleLines = text.split('\n');
@@ -236,109 +224,83 @@ const PuzzleScoreboard: React.FC = () => {
         }
       }
     }
-    
-// Parse Strands
-if (text.includes('Strands')) {
-  console.log('=== STRANDS DEBUGGING ===');
-  const lines = text.split('\n');
-  const strandsStartIndex = lines.findIndex(line => line.trim().startsWith('Strands'));
-  
-  if (strandsStartIndex !== -1) {
-    const strandsLines = lines.slice(strandsStartIndex);
-    
-    // Find grid lines (with emojis)
-    const gridLines = strandsLines.filter(line => 
-      line.includes('🔵') || line.includes('🟡')
-    );
-    
-    console.log('Found grid lines:', gridLines);
 
-    if (gridLines.length > 0) {
-      // Base point for completion
-      gameScores.strands = 1;
-      console.log('Setting base strands score to 1');
+    // Parse Connections
+    if (text.includes('Connections')) {
+      let score = 0;
+      const lines = text.split('\n');
+      const connectionsStartIndex = lines.findIndex(line => line.trim() === 'Connections');
       
-      // Check for spanagram bonus - ONLY in first line
-      const firstLine = gridLines[0];
-      console.log('First line:', firstLine);
-      
-      // Check if first line has a yellow circle
-      const foundSpanagramInFirstMove = firstLine.includes('🟡');
-      
-      if (foundSpanagramInFirstMove) {
-        gameScores.strands++;
-        bonusPoints.strandsSpanagram = true;
-        console.log('Added spanagram bonus point');
-      } else {
-        console.log('No early spanagram - no bonus point');
+      if (connectionsStartIndex !== -1) {
+        const connectionsLines = lines.slice(connectionsStartIndex);
+        const gridLines = connectionsLines.filter(line => 
+          line.includes('🟪') || line.includes('🟩') || 
+          line.includes('🟦') || line.includes('🟨')
+        );
+
+        if (gridLines.length > 0) {
+          const lastAttempt = gridLines[gridLines.length - 1];
+          const isComplete = ['🟪', '🟩', '🟦', '🟨'].some(color => 
+            lastAttempt.split(color).length - 1 === 4
+          );
+
+          if (isComplete) {
+            const hasErrors = gridLines.slice(0, -1).some(line => {
+              const colors = ['🟪', '🟩', '🟦', '🟨'].filter(color => line.includes(color));
+              return colors.length > 1;
+            });
+
+            const firstLine = gridLines[0];
+            const purpleFirst = firstLine && firstLine.split('🟪').length - 1 === 4;
+
+            if (purpleFirst) {
+              if (!hasErrors) {
+                score = 3;
+                bonusPoints.connectionsPerfect = true;
+              } else {
+                score = 2;
+              }
+            } else {
+              score = hasErrors ? 1 : 2;
+            }
+          }
+        }
+        gameScores.connections = score;
       }
     }
-  }
-  console.log('Final Strands score:', gameScores.strands);
-}
 
-  const totalScore = gameScores.wordle + gameScores.connections + gameScores.strands;
-  console.log('Final total score breakdown:', {
-    wordle: gameScores.wordle,
-    connections: gameScores.connections,
-    strands: gameScores.strands,
-    total: totalScore
-  });
-  
-  return { score: totalScore, bonusPoints, gameScores };
-};
+    // Parse Strands
+    if (text.includes('Strands')) {
+      const lines = text.split('\n');
+      const strandsStartIndex = lines.findIndex(line => line.trim().startsWith('Strands'));
+      
+      if (strandsStartIndex !== -1) {
+        const strandsLines = lines.slice(strandsStartIndex);
+        const gridLines = strandsLines.filter(line => 
+          line.includes('🔵') || line.includes('🟡')
+        );
 
-
-  const canEditDate = (date: string, scores: PlayerScores): boolean => {
-    const playerScores = [
-      scores.player1.dailyScores[date],
-      scores.player2.dailyScores[date],
-      scores.player3.dailyScores[date]
-    ];
-    return date === new Date().toISOString().split('T')[0] && 
-           (!playerScores.some(score => score?.finalized));
-  };
-  
-  // Add finalizeDayScores function
-  const finalizeDayScores = async () => {
-    try {
-      const { error } = await supabase
-        .from('daily_scores')
-        .update({ finalized: true })
-        .eq('date', currentDate);
-  
-      if (error) throw error;
-  
-      await fetchAllScores();
-    } catch (error) {
-      console.error('Error finalizing scores:', error);
+        if (gridLines.length > 0) {
+          gameScores.strands = 1;
+          
+          const firstLine = gridLines[0];
+          if (firstLine.includes('🟡')) {
+            gameScores.strands++;
+            bonusPoints.strandsSpanagram = true;
+          }
+        }
+      }
     }
-  };
-  
-  // Helper function to get player key from name
-  const getPlayerKeyFromName = (name: PlayerName): PlayerKey => {
-    switch (name) {
-      case 'Keith': return 'player1';
-      case 'Mike': return 'player2';
-      case 'Colleen': return 'player3';
-    }
-  };
-  
-  // Helper function to get player name from key
-  const getPlayerNameFromKey = (key: PlayerKey): PlayerName => {
-    switch (key) {
-      case 'player1': return 'Keith';
-      case 'player2': return 'Mike';
-      case 'player3': return 'Colleen';
-    }
+
+    const totalScore = gameScores.wordle + gameScores.connections + gameScores.strands;
+    return { score: totalScore, bonusPoints, gameScores };
   };
 
-  // ... (fetchAllScores and other functions remain the same, just update player mapping)
   const CONTEST_START_DATE = '2023-12-10';
-  
+
   const fetchAllScores = async () => {
     try {
-      const { data: scoresData, error } = await supabase
+      const { data: scoresData, error } = await publicSupabase
         .from('daily_scores')
         .select(`
           *,
@@ -346,21 +308,20 @@ if (text.includes('Strands')) {
             name
           )
         `)
-        .gte('date', CONTEST_START_DATE); // Only fetch scores from contest start date
-  
+        .gte('date', CONTEST_START_DATE);
+
       if (error) throw error;
-  
+
       const newScores: PlayerScores = {
         player1: initialPlayerData(),
         player2: initialPlayerData(),
         player3: initialPlayerData()
       };
-  
-      scoresData?.forEach(score => {
+
+      scoresData?.forEach((score: ScoreRecord) => {
         const playerName = score.players.name as PlayerName;
         const playerKey = getPlayerKeyFromName(playerName);
         
-        // Add to daily scores
         newScores[playerKey].dailyScores[score.date] = {
           date: score.date,
           wordle: score.wordle,
@@ -374,58 +335,56 @@ if (text.includes('Strands')) {
           },
           finalized: score.finalized
         };
-  
-        // Update running totals
+
         newScores[playerKey].total += score.total;
         if (score.bonus_wordle) newScores[playerKey].totalBonuses.wordle++;
         if (score.bonus_connections) newScores[playerKey].totalBonuses.connections++;
         if (score.bonus_strands) newScores[playerKey].totalBonuses.strands++;
       });
-  
+
       setScores(newScores);
     } catch (error) {
       console.error('Error fetching scores:', error);
     }
   };
 
-  const ScoreCard: React.FC<ScoreCardProps> = ({ title, score, icon: Icon, bonusCount }) => (
-    <div className="flex items-center space-x-2 p-4 bg-gray-100 rounded-lg">
-      <Icon className="w-6 h-6 text-blue-600" />
-      <div className="flex-1">
-        <div className="text-sm text-gray-800">{title}</div>
-        <div className="text-xl font-bold text-gray-900">{score}</div>
-      </div>
-      {bonusCount !== undefined && bonusCount > 0 && (
-        <div className="flex items-center text-yellow-600">
-          <Star className="w-4 h-4" />
-          <span className="ml-1 text-gray-900">{bonusCount}</span>
-        </div>
-      )}
-    </div>
-  );
+  const getPlayerKeyFromName = (name: PlayerName): PlayerKey => {
+    switch (name) {
+      case 'Keith': return 'player1';
+      case 'Mike': return 'player2';
+      case 'Colleen': return 'player3';
+    }
+  };
 
-  // Update handleSubmit to handle the third player
-  const handleSubmit = async () => {
-    if (!currentEntry || !inputText) return;
-  
-    // Calculate scores first
-    const { score, bonusPoints, gameScores } = calculateScores(inputText);
+  const canEditDate = (date: string, scores: PlayerScores): boolean => {
+    if (!isAdmin) return false;
     
+    const playerScores = [
+      scores.player1.dailyScores[date],
+      scores.player2.dailyScores[date],
+      scores.player3.dailyScores[date]
+    ];
+    return date === new Date().toISOString().split('T')[0] && 
+           (!playerScores.some(score => score?.finalized));
+  };
+
+  const handleSubmit = async () => {
+    if (!currentEntry || !inputText || !isAdmin) return;
+
     try {
-      // Get player name based on currentEntry
+      const { score, bonusPoints, gameScores } = calculateScores(inputText);
+      
       const playerName = currentEntry === 'player1' ? 'Keith' : 
                         currentEntry === 'player2' ? 'Mike' : 'Colleen';
-      
-      console.log('Submitting scores:', { gameScores, totalScore: score, bonusPoints });
-  
+
       const { data: player, error: playerError } = await supabase
         .from('players')
         .select('id')
         .eq('name', playerName)
         .single();
-  
+
       if (playerError) throw playerError;
-  
+
       const { error: scoreError } = await supabase
         .from('daily_scores')
         .upsert({
@@ -440,21 +399,36 @@ if (text.includes('Strands')) {
           bonus_strands: bonusPoints.strandsSpanagram,
           finalized: false
         });
-  
+
       if (scoreError) throw scoreError;
-  
-      // Refresh scores after successful submission
+
       await fetchAllScores();
       setInputText('');
       setCurrentEntry(null);
-  
+
     } catch (error) {
       console.error('Error submitting score:', error);
     }
   };
 
-  // Update the UI to include the third player button and scores
-  return (
+  const finalizeDayScores = async () => {
+    if (!isAdmin) return;
+    
+    try {
+      const { error } = await supabase
+        .from('daily_scores')
+        .update({ finalized: true })
+        .eq('date', currentDate);
+
+      if (error) throw error;
+
+      await fetchAllScores();
+    } catch (error) {
+      console.error('Error finalizing scores:', error);
+    }
+  };
+
+  const renderScoreboard = () => (
     <div className="w-full max-w-4xl bg-white rounded-lg shadow-sm border">
       <div className="p-6">
         <h2 className="text-2xl font-bold text-center text-gray-900">NYT Puzzle Competition Scoreboard</h2>
@@ -476,103 +450,107 @@ if (text.includes('Strands')) {
           player2Name={player2Name}
           player3Name={player3Name}
         />
-  
-        {/* Player Selection - Now with three buttons */}
-        <div className="flex space-x-4">
-          <button
-            onClick={() => setCurrentEntry('player1')}
-            disabled={!canEditDate(currentDate, scores)}
-            className={`p-2 rounded-md flex-1 ${
-              currentEntry === 'player1' 
-                ? 'bg-blue-500 text-white' 
-                : canEditDate(currentDate, scores)
-                  ? 'bg-gray-200 hover:bg-gray-300'
-                  : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-            }`}
-          >
-            Keith's Entry
-          </button>
-          <button
-            onClick={() => setCurrentEntry('player2')}
-            disabled={!canEditDate(currentDate, scores)}
-            className={`p-2 rounded-md flex-1 ${
-              currentEntry === 'player2'
-                ? 'bg-blue-500 text-white'
-                : canEditDate(currentDate, scores)
-                ? 'bg-gray-200 hover:bg-gray-300'
-                : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-            }`}
-          >
-            Mike's Entry
-          </button>
-          <button
-            onClick={() => setCurrentEntry('player3')}
-            disabled={!canEditDate(currentDate, scores)}
-            className={`p-2 rounded-md flex-1 ${
-              currentEntry === 'player3'
-                ? 'bg-blue-500 text-white'
-                : canEditDate(currentDate, scores)
-                ? 'bg-gray-200 hover:bg-gray-300'
-                : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-            }`}
-          >
-            Colleen's Entry
-          </button>
-        </div>
 
-        {/* Results Input */}
-        <div>
-          <textarea
-            value={inputText}
-            onChange={(e) => setInputText(e.target.value)}
-            disabled={!canEditDate(currentDate, scores) || !currentEntry}
-            className="w-full h-48 p-2 border rounded font-mono"
-            placeholder={
-              !canEditDate(currentDate, scores)
-                ? "Cannot edit past dates"
-                : !currentEntry
-                ? "Select a player first"
-                : "Paste your results here..."
-            }
-          />
-        </div>
+        {isAdmin && (
+          <>
+            {/* Player Selection */}
+            <div className="flex space-x-4 mb-4">
+              <button
+                onClick={() => setCurrentEntry('player1')}
+                disabled={!canEditDate(currentDate, scores)}
+                className={`p-2 rounded-md flex-1 ${
+                  currentEntry === 'player1' 
+                    ? 'bg-blue-500 text-white' 
+                    : canEditDate(currentDate, scores)
+                      ? 'bg-gray-200 hover:bg-gray-300'
+                      : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                }`}
+              >
+                Keith's Entry
+              </button>
+              <button
+                onClick={() => setCurrentEntry('player2')}
+                disabled={!canEditDate(currentDate, scores)}
+                className={`p-2 rounded-md flex-1 ${
+                  currentEntry === 'player2'
+                    ? 'bg-blue-500 text-white'
+                    : canEditDate(currentDate, scores)
+                    ? 'bg-gray-200 hover:bg-gray-300'
+                    : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                }`}
+              >
+                Mike's Entry
+              </button>
+              <button
+                onClick={() => setCurrentEntry('player3')}
+                disabled={!canEditDate(currentDate, scores)}
+                className={`p-2 rounded-md flex-1 ${
+                  currentEntry === 'player3'
+                    ? 'bg-blue-500 text-white'
+                    : canEditDate(currentDate, scores)
+                    ? 'bg-gray-200 hover:bg-gray-300'
+                    : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                }`}
+              >
+                Colleen's Entry
+              </button>
+            </div>
 
-        {/* Submit and Clear Buttons */}
-        <div className="flex justify-end space-x-4">
-          <button
-            onClick={handleSubmit}
-            disabled={!canEditDate(currentDate, scores) || !currentEntry || !inputText}
-            className={`p-2 rounded ${
-              canEditDate(currentDate, scores) && currentEntry && inputText
-                ? 'bg-green-500 text-white hover:bg-green-600'
-                : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-            }`}
-          >
-            Submit Entry
-          </button>
-          <button
-            onClick={() => {
-              setInputText('');
-              setCurrentEntry(null);
-            }}
-            className="p-2 bg-gray-200 rounded hover:bg-gray-300"
-          >
-            Clear Input
-          </button>
-        </div>
+            {/* Results Input */}
+            <div className="mb-4">
+              <textarea
+                value={inputText}
+                onChange={(e) => setInputText(e.target.value)}
+                disabled={!canEditDate(currentDate, scores) || !currentEntry}
+                className="w-full h-48 p-2 border rounded font-mono"
+                placeholder={
+                  !canEditDate(currentDate, scores)
+                    ? "Cannot edit past dates"
+                    : !currentEntry
+                    ? "Select a player first"
+                    : "Paste your results here..."
+                }
+              />
+            </div>
 
-        {/* Finalize Day Button */}
-        <div className="flex justify-center">
-          <button
-            onClick={finalizeDayScores}
-            className="p-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-          >
-            Finalize Day's Scores
-          </button>
-        </div>
+            {/* Submit and Clear Buttons */}
+            <div className="flex justify-end space-x-4 mb-4">
+              <button
+                onClick={handleSubmit}
+                disabled={!canEditDate(currentDate, scores) || !currentEntry || !inputText}
+                className={`p-2 rounded ${
+                  canEditDate(currentDate, scores) && currentEntry && inputText
+                    ? 'bg-green-500 text-white hover:bg-green-600'
+                    : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                }`}
+              >
+                Submit Entry
+              </button>
+              <button
+                onClick={() => {
+                  setInputText('');
+                  setCurrentEntry(null);
+                }}
+                className="p-2 bg-gray-200 rounded hover:bg-gray-300"
+              >
+                Clear Input
+              </button>
+            </div>
 
-        {/* Scoreboard - Now with three columns */}
-        <div className="grid grid-cols-3 gap-8">
+            {/* Finalize Day Button */}
+            <div className="flex justify-center mb-8">
+              <button
+                onClick={finalizeDayScores}
+                className="p-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+              >
+                Finalize Day's Scores
+              </button>
+            </div>
+          </>
+        )}
+
+        {/* Daily Scores Grid */}
+        <div className="grid grid-cols-3 gap-8 mb-8">
           {/* Player 1 Scores */}
           <div className="space-y-4">
             <h3 className="text-xl font-bold">Keith</h3>
@@ -594,7 +572,7 @@ if (text.includes('Strands')) {
               icon={Brain}
               bonusCount={scores.player1.dailyScores[currentDate]?.bonusPoints.strandsSpanagram ? 1 : 0}
             />
-            <div className="text-sm text-gray-600 mt-2">
+            <div className="text-sm text-gray-600">
               Total Bonus Points: 
               <span className="ml-2">Wordle ({scores.player1.totalBonuses.wordle})</span>
               <span className="ml-2">Connections ({scores.player1.totalBonuses.connections})</span>
@@ -623,7 +601,7 @@ if (text.includes('Strands')) {
               icon={Brain}
               bonusCount={scores.player2.dailyScores[currentDate]?.bonusPoints.strandsSpanagram ? 1 : 0}
             />
-            <div className="text-sm text-gray-600 mt-2">
+            <div className="text-sm text-gray-600">
               Total Bonus Points: 
               <span className="ml-2">Wordle ({scores.player2.totalBonuses.wordle})</span>
               <span className="ml-2">Connections ({scores.player2.totalBonuses.connections})</span>
@@ -652,7 +630,7 @@ if (text.includes('Strands')) {
               icon={Brain}
               bonusCount={scores.player3.dailyScores[currentDate]?.bonusPoints.strandsSpanagram ? 1 : 0}
             />
-            <div className="text-sm text-gray-600 mt-2">
+            <div className="text-sm text-gray-600">
               Total Bonus Points: 
               <span className="ml-2">Wordle ({scores.player3.totalBonuses.wordle})</span>
               <span className="ml-2">Connections ({scores.player3.totalBonuses.connections})</span>
@@ -665,46 +643,54 @@ if (text.includes('Strands')) {
         <ScoreHistoryChart scores={scores} />
 
         {/* Rules Section */}
-<Card className="mt-8 bg-gray-50">
-  <CardHeader>
-    <CardTitle className="text-xl font-semibold text-gray-900">Game Rules & Scoring</CardTitle>
-  </CardHeader>
-  <CardContent className="space-y-6">
-    {/* Wordle Rules */}
-    <div>
-      <h3 className="text-lg font-semibold mb-2 text-gray-900">Wordle</h3>
-      <ul className="list-disc pl-6 space-y-1 text-gray-800">
-        <li>1 point for completing the puzzle</li>
-        <li>1 bonus point if finished within 3 lines or less</li>
-      </ul>
-    </div>
+        <Card className="mt-8 bg-gray-50">
+          <CardHeader>
+            <CardTitle className="text-xl font-semibold text-gray-900">Game Rules & Scoring</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Wordle Rules */}
+            <div>
+              <h3 className="text-lg font-semibold mb-2 text-gray-900">Wordle</h3>
+              <ul className="list-disc pl-6 space-y-1 text-gray-800">
+                <li>1 point for completing the puzzle</li>
+                <li>1 bonus point if finished within 3 lines or less</li>
+              </ul>
+            </div>
 
-    <div className="my-4 border-t border-gray-200" />
+            <div className="my-4 border-t border-gray-200" />
 
-    {/* Connections Rules */}
-    <div>
-      <h3 className="text-lg font-semibold mb-2 text-gray-900">Connections</h3>
-      <ul className="list-disc pl-6 space-y-1 text-gray-800">
-        <li>1 point for completing the puzzle with errors</li>
-        <li>2 points for completing the puzzle with no errors</li>
-        <li>3 points if you get purple first and complete with no errors</li>
-        <li>2 points if you get purple first but have errors</li>
-      </ul>
-    </div>
+            {/* Connections Rules */}
+            <div>
+              <h3 className="text-lg font-semibold mb-2 text-gray-900">Connections</h3>
+              <ul className="list-disc pl-6 space-y-1 text-gray-800">
+                <li>1 point for completing the puzzle with errors</li>
+                <li>2 points for completing the puzzle with no errors</li>
+                <li>3 points if you get purple first and complete with no errors</li>
+                <li>2 points if you get purple first but have errors</li>
+              </ul>
+            </div>
 
-    <div className="my-4 border-t border-gray-200" />
+            <div className="my-4 border-t border-gray-200" />
 
-    {/* Strands Rules */}
-    <div>
-      <h3 className="text-lg font-semibold mb-2 text-gray-900">Strands</h3>
-      <ul className="list-disc pl-6 space-y-1 text-gray-800">
-        <li>1 point for completing the puzzle with no hints</li>
-        <li>1 bonus point if spanagram found within first three moves</li>
-      </ul>
-    </div>
-  </CardContent>
-</Card>
+            {/* Strands Rules */}
+            <div>
+              <h3 className="text-lg font-semibold mb-2 text-gray-900">Strands</h3>
+              <ul className="list-disc pl-6 space-y-1 text-gray-800">
+                <li>1 point for completing the puzzle with no hints</li>
+                <li>1 bonus point if spanagram found within first three moves</li>
+              </ul>
+            </div>
+          </CardContent>
+        </Card>
       </div>
+    </div>
+  );
+
+  // Main render
+  return (
+    <div className="w-full max-w-4xl mx-auto">
+      {!isAdmin && <AdminAuth onLogin={() => setIsAdmin(true)} />}
+      {renderScoreboard()}
     </div>
   );
 };

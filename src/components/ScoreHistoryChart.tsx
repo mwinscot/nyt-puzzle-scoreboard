@@ -11,42 +11,8 @@ import {
   Legend,
   ResponsiveContainer
 } from 'recharts';
-
-interface BonusPoints {
-  wordleQuick: boolean;
-  connectionsPerfect: boolean;
-  strandsSpanagram: boolean;
-}
-
-interface DailyScore {
-  date: string;
-  wordle: number;
-  connections: number;
-  strands: number;
-  total: number;
-  bonusPoints: BonusPoints;
-  finalized: boolean;
-}
-
-interface PlayerData {
-  dailyScores: { [date: string]: DailyScore };
-  total: number;
-  totalBonuses: {
-    wordle: number;
-    connections: number;
-    strands: number;
-  };
-}
-
-interface PlayerScores {
-  player1: PlayerData;
-  player2: PlayerData;
-  player3: PlayerData;  // Added this line
-}
-
-interface ScoreHistoryChartProps {
-  scores: PlayerScores;
-}
+import { publicSupabase } from '@/lib/supabase';
+import { PlayerScores } from '@/types';
 
 interface TooltipPayloadItem {
   name: string;
@@ -58,6 +24,10 @@ interface CustomTooltipProps {
   active?: boolean;
   payload?: TooltipPayloadItem[];
   label?: string;
+}
+
+interface ScoreHistoryChartProps {
+  scores: PlayerScores;
 }
 
 const CustomTooltip: React.FC<CustomTooltipProps> = ({ active, payload, label }) => {
@@ -76,9 +46,76 @@ const CustomTooltip: React.FC<CustomTooltipProps> = ({ active, payload, label })
   return null;
 };
 
-const ScoreHistoryChart: React.FC<ScoreHistoryChartProps> = ({ scores }) => {
+const ScoreHistoryChart: React.FC<ScoreHistoryChartProps> = ({ playerScores }) => {
+  const [playerData, setPlayerData] = useState<PlayerScores>(playerScores);
+
+  useEffect(() => {
+    const fetchScores = async () => {
+      // Get all players first
+      const { data: players, error: playersError } = await publicSupabase
+        .from('players')
+        .select('*')
+        .order('id');
+
+        if (playersError) {
+          console.error('Error fetching players:', playersError);
+          return;
+        }
+  
+        // Then get all scores
+        const { data: dailyScores, error: scoresError } = await publicSupabase
+          .from('daily_scores')
+          .select('*')
+          .order('date');
+  
+        if (scoresError) {
+          console.error('Error fetching scores:', scoresError);
+          return;
+        }
+
+      // Transform the data to match your current structure
+      const transformedData: PlayerScores = {
+        player1: { dailyScores: {}, total: 0, totalBonuses: { wordle: 0, connections: 0, strands: 0 } },
+        player2: { dailyScores: {}, total: 0, totalBonuses: { wordle: 0, connections: 0, strands: 0 } },
+        player3: { dailyScores: {}, total: 0, totalBonuses: { wordle: 0, connections: 0, strands: 0 } },
+      };
+
+      dailyScores.forEach((score) => {
+        const playerIndex = players.findIndex(p => p.id === score.player_id);
+        if (playerIndex === -1) return;
+
+        const playerKey = `player${playerIndex + 1}` as keyof PlayerScores;
+        
+        transformedData[playerKey].dailyScores[score.date] = {
+          date: score.date,
+          wordle: score.wordle || 0,
+          connections: score.connections || 0,
+          strands: score.strands || 0,
+          total: score.total || 0,
+          bonusPoints: {
+            wordleQuick: score.bonus_wordle || false,
+            connectionsPerfect: score.bonus_connections || false,
+            strandsSpanagram: score.bonus_strands || false
+          },
+          finalized: score.finalized || false
+        };
+
+        // Update bonus totals
+        if (score.bonus_wordle) transformedData[playerKey].totalBonuses.wordle++;
+        if (score.bonus_connections) transformedData[playerKey].totalBonuses.connections++;
+        if (score.bonus_strands) transformedData[playerKey].totalBonuses.strands++;
+        
+        transformedData[playerKey].total += score.total || 0;
+      });
+
+      setPlayerData(transformedData);
+    };
+
+    fetchScores();
+  }, []);
+
   const chartData = useMemo(() => {
-    // Get all dates from all players
+    // Get all dates from both players
     const allDates = new Set([
       ...Object.keys(scores.player1.dailyScores),
       ...Object.keys(scores.player2.dailyScores),
@@ -91,7 +128,6 @@ const ScoreHistoryChart: React.FC<ScoreHistoryChartProps> = ({ scores }) => {
     // Calculate running totals for each date
     let player1RunningTotal = 0;
     let player2RunningTotal = 0;
-    let player3RunningTotal = 0;
 
     return sortedDates.map(date => {
       // Get daily scores for each player
@@ -100,9 +136,9 @@ const ScoreHistoryChart: React.FC<ScoreHistoryChartProps> = ({ scores }) => {
       const p3DailyScore = scores.player3.dailyScores[date]?.total || 0;
       
       // Get individual game scores
-      const p1Wordle = scores.player1.dailyScores[date]?.wordle || 0;
-      const p1Connections = scores.player1.dailyScores[date]?.connections || 0;
-      const p1Strands = scores.player1.dailyScores[date]?.strands || 0;
+      const p1Wordle = playerData.player1.dailyScores[date]?.wordle || 0;
+      const p1Connections = playerData.player1.dailyScores[date]?.connections || 0;
+      const p1Strands = playerData.player1.dailyScores[date]?.strands || 0;
       
       const p2Wordle = scores.player2.dailyScores[date]?.wordle || 0;
       const p2Connections = scores.player2.dailyScores[date]?.connections || 0;
@@ -115,16 +151,13 @@ const ScoreHistoryChart: React.FC<ScoreHistoryChartProps> = ({ scores }) => {
       // Update running totals
       player1RunningTotal += p1DailyScore;
       player2RunningTotal += p2DailyScore;
-      player3RunningTotal += p3DailyScore;
 
       return {
         date,
         'Keith Total': player1RunningTotal,
         'Mike Total': player2RunningTotal,
-        'Colleen Total': player3RunningTotal,
         'Keith Daily': p1DailyScore,
         'Mike Daily': p2DailyScore,
-        'Colleen Daily': p3DailyScore,
         // Individual game scores
         'Keith Wordle': p1Wordle,
         'Keith Connections': p1Connections,
@@ -132,12 +165,9 @@ const ScoreHistoryChart: React.FC<ScoreHistoryChartProps> = ({ scores }) => {
         'Mike Wordle': p2Wordle,
         'Mike Connections': p2Connections,
         'Mike Strands': p2Strands,
-        'Colleen Wordle': p3Wordle,
-        'Colleen Connections': p3Connections,
-        'Colleen Strands': p3Strands,
       };
     });
-  }, [scores]);
+  }, [playerData]);
 
   return (
     <div className="mt-8 p-6 bg-white rounded-lg shadow border">
@@ -170,13 +200,6 @@ const ScoreHistoryChart: React.FC<ScoreHistoryChartProps> = ({ scores }) => {
               strokeWidth={2}
               dot={false}
             />
-            <Line
-              type="monotone"
-              dataKey="Colleen Total"
-              stroke="#047857"
-              strokeWidth={2}
-              dot={false}
-            />
 
             {/* Daily Totals - Dashed lines */}
             <Line
@@ -190,13 +213,6 @@ const ScoreHistoryChart: React.FC<ScoreHistoryChartProps> = ({ scores }) => {
               type="monotone"
               dataKey="Mike Daily"
               stroke="#fca5a5"
-              strokeWidth={1}
-              strokeDasharray="5 5"
-            />
-            <Line
-              type="monotone"
-              dataKey="Colleen Daily"
-              stroke="#34d399"
               strokeWidth={1}
               strokeDasharray="5 5"
             />
@@ -248,32 +264,6 @@ const ScoreHistoryChart: React.FC<ScoreHistoryChartProps> = ({ scores }) => {
               type="monotone"
               dataKey="Mike Strands"
               stroke="#b91c1c"
-              strokeWidth={1}
-              dot={true}
-              opacity={0.5}
-            />
-
-            {/* Individual Game Scores - Colleen */}
-            <Line
-              type="monotone"
-              dataKey="Colleen Wordle"
-              stroke="#6ee7b7"
-              strokeWidth={1}
-              dot={true}
-              opacity={0.5}
-            />
-            <Line
-              type="monotone"
-              dataKey="Colleen Connections"
-              stroke="#10b981"
-              strokeWidth={1}
-              dot={true}
-              opacity={0.5}
-            />
-            <Line
-              type="monotone"
-              dataKey="Colleen Strands"
-              stroke="#047857"
               strokeWidth={1}
               dot={true}
               opacity={0.5}
