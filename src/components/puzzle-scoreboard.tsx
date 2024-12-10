@@ -1,29 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Session, User, SupabaseClient } from '@supabase/supabase-js';
 import { AuthChangeEvent } from '@supabase/supabase-js';
+import { Trophy, Target, Puzzle, Brain, Star } from 'lucide-react';
 import { supabase, publicSupabase, Database } from '@/lib/supabase';
+import { PlayerScores, PlayerData, PlayerKey, PlayerName, DailyScore, BonusPoints } from '@/types';
 import { AdminAuth } from './AdminAuth';
 import ScoreHistoryChart from './ScoreHistoryChart';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Trophy, Target, Puzzle, Brain, Star } from 'lucide-react';
-
-  interface ScoreRecord {
-    id: number;
-    date: string;
-    player_id: number;
-    wordle: number;
-    connections: number;
-    strands: number;
-    total: number;
-    bonus_wordle: boolean;
-    bonus_connections: boolean;
-    bonus_strands: boolean;
-    finalized: boolean;
-    created_at?: string;
-    players: {
-      name: string;
-    };
-  }
 
 interface TotalScoreHeaderProps {
   player1Score: number;
@@ -41,40 +24,23 @@ interface ScoreCardProps {
   bonusCount?: number;
 }
 
-interface BonusPoints {
-  wordleQuick: boolean;
-  connectionsPerfect: boolean;
-  strandsSpanagram: boolean;
-}
-
-interface DailyScore {
+interface ScoreRecord {
+  id: number;
   date: string;
+  player_id: number;
   wordle: number;
   connections: number;
   strands: number;
   total: number;
-  bonusPoints: BonusPoints;
+  bonus_wordle: boolean;
+  bonus_connections: boolean;
+  bonus_strands: boolean;
   finalized: boolean;
-}
-
-interface PlayerData {
-  dailyScores: { [date: string]: DailyScore };
-  total: number;
-  totalBonuses: {
-    wordle: number;
-    connections: number;
-    strands: number;
+  created_at?: string;
+  players: {
+    name: string;
   };
 }
-
-interface PlayerScores {
-  player1: PlayerData;
-  player2: PlayerData;
-  player3: PlayerData;
-}
-
-type PlayerKey = 'player1' | 'player2' | 'player3';
-type PlayerName = 'Keith' | 'Mike' | 'Colleen';
 
 const initialPlayerData = (): PlayerData => ({
   dailyScores: {},
