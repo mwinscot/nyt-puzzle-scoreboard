@@ -150,117 +150,130 @@ const PuzzleScoreboard: React.FC = () => {
   };
 }, []);
 
-  const calculateScores = (text: string): { 
-    score: number, 
-    bonusPoints: BonusPoints, 
-    gameScores: { 
-      wordle: number, 
-      connections: number, 
-      strands: number 
-    } 
-  } => {
-    // Your existing calculateScores function implementation
-    const bonusPoints: BonusPoints = {
-      wordleQuick: false,
-      connectionsPerfect: false,
-      strandsSpanagram: false
-    };
+const calculateScores = (text: string): { 
+  score: number, 
+  bonusPoints: BonusPoints, 
+  gameScores: { 
+    wordle: number, 
+    connections: number, 
+    strands: number 
+  } 
+} => {
+  const bonusPoints: BonusPoints = {
+    wordleQuick: false,
+    connectionsPerfect: false,
+    strandsSpanagram: false
+  };
+  
+  const gameScores = {
+    wordle: 0,
+    connections: 0,
+    strands: 0
+  };
+
+  // Parse Connections
+  if (text.includes('Connections')) {
+    let score = 0;
+    const lines = text.split('\n');
+    const connectionsStartIndex = lines.findIndex(line => line.includes('Connections'));
     
-    const gameScores = {
-      wordle: 0,
-      connections: 0,
-      strands: 0
-    };
+    if (connectionsStartIndex !== -1) {
+      // Get only the lines related to Connections
+      const connectionsLines = lines.slice(connectionsStartIndex);
+      const gridLines = connectionsLines.filter(line => 
+        line.includes('🟪') || line.includes('🟩') || 
+        line.includes('🟦') || line.includes('🟨')
+      );
 
-    // Parse Wordle
-    if (text.includes('Wordle')) {
-      const wordleLines = text.split('\n');
-      const scoreLine = wordleLines.find(line => line.includes('/6'));
-      
-      if (scoreLine && !scoreLine.includes('X/6')) {
-        gameScores.wordle = 1;
-        
-        const guessMatch = scoreLine.match(/(\d+)\/6/);
-        if (guessMatch) {
-          const guesses = parseInt(guessMatch[1]);
-          if (guesses <= 3) {
-            gameScores.wordle++;
-            bonusPoints.wordleQuick = true;
-          }
-        }
-      }
-    }
-
-    // Parse Connections
-    if (text.includes('Connections')) {
-      let score = 0;
-      const lines = text.split('\n');
-      const connectionsStartIndex = lines.findIndex(line => line.trim() === 'Connections');
-      
-      if (connectionsStartIndex !== -1) {
-        const connectionsLines = lines.slice(connectionsStartIndex);
-        const gridLines = connectionsLines.filter(line => 
-          line.includes('🟪') || line.includes('🟩') || 
-          line.includes('🟦') || line.includes('🟨')
+      if (gridLines.length > 0) {
+        // Check if puzzle is completed
+        const lastLine = gridLines[gridLines.length - 1];
+        const isComplete = ['🟪', '🟩', '🟦', '🟨'].some(color => 
+          lastLine.split(color).length - 1 === 4
         );
 
-        if (gridLines.length > 0) {
-          const lastAttempt = gridLines[gridLines.length - 1];
-          const isComplete = ['🟪', '🟩', '🟦', '🟨'].some(color => 
-            lastAttempt.split(color).length - 1 === 4
-          );
+        if (isComplete) {
+          // Check if there were any errors by looking at previous lines
+          const hasErrors = gridLines.slice(0, -1).some(line => {
+            const colors = ['🟪', '🟩', '🟦', '🟨'];
+            // A line has an error if it contains more than one color AND at least one color appears 4 times
+            const colorCounts = colors.map(color => line.split(color).length - 1);
+            return colorCounts.filter(count => count > 0).length > 1 && colorCounts.some(count => count === 4);
+          });
 
-          if (isComplete) {
-            const hasErrors = gridLines.slice(0, -1).some(line => {
-              const colors = ['🟪', '🟩', '🟦', '🟨'].filter(color => line.includes(color));
-              return colors.length > 1;
-            });
+          // Check if purple was completed first
+          const firstCompletedLine = gridLines.find(line => {
+            const colors = ['🟪', '🟩', '🟦', '🟨'];
+            return colors.some(color => line.split(color).length - 1 === 4);
+          });
+          const purpleFirst = firstCompletedLine && firstCompletedLine.split('🟪').length - 1 === 4;
 
-            const firstLine = gridLines[0];
-            const purpleFirst = firstLine && firstLine.split('🟪').length - 1 === 4;
-
-            if (purpleFirst) {
-              if (!hasErrors) {
-                score = 3;
-                bonusPoints.connectionsPerfect = true;
-              } else {
-                score = 2;
-              }
+          if (purpleFirst) {
+            if (!hasErrors) {
+              score = 3; // Purple first, no errors
+              bonusPoints.connectionsPerfect = true;
             } else {
-              score = hasErrors ? 1 : 2;
+              score = 2; // Purple first, but with errors
+            }
+          } else {
+            if (!hasErrors) {
+              score = 2; // No errors, but purple wasn't first
+            } else {
+              score = 1; // Completed with errors
             }
           }
         }
-        gameScores.connections = score;
       }
+      gameScores.connections = score;
     }
+  }
 
-    // Parse Strands
-    if (text.includes('Strands')) {
-      const lines = text.split('\n');
-      const strandsStartIndex = lines.findIndex(line => line.trim().startsWith('Strands'));
-      
-      if (strandsStartIndex !== -1) {
-        const strandsLines = lines.slice(strandsStartIndex);
-        const gridLines = strandsLines.filter(line => 
-          line.includes('🔵') || line.includes('🟡')
-        );
+  // Parse Strands
+  if (text.includes('Strands')) {
+    const lines = text.split('\n');
+    const strandsStartIndex = lines.findIndex(line => line.includes('Strands'));
+    
+    if (strandsStartIndex !== -1) {
+      const strandsLines = lines.slice(strandsStartIndex);
+      const gridLines = strandsLines.filter(line => 
+        line.includes('🔵') || line.includes('🟡')
+      );
 
-        if (gridLines.length > 0) {
-          gameScores.strands = 1;
-          
-          const firstLine = gridLines[0];
-          if (firstLine.includes('🟡')) {
-            gameScores.strands++;
-            bonusPoints.strandsSpanagram = true;
-          }
+      if (gridLines.length > 0) {
+        gameScores.strands = 1;  // Base point for completion
+        
+        // Check for spanagram bonus in first three moves
+        const firstThreeLines = gridLines.slice(0, 3);
+        if (firstThreeLines.some(line => line.includes('🟡'))) {
+          gameScores.strands++;
+          bonusPoints.strandsSpanagram = true;
         }
       }
     }
+  }
 
-    const totalScore = gameScores.wordle + gameScores.connections + gameScores.strands;
-    return { score: totalScore, bonusPoints, gameScores };
-  };
+  // Parse Wordle
+  if (text.includes('Wordle')) {
+    const wordleLines = text.split('\n');
+    const scoreLine = wordleLines.find(line => line.includes('/6'));
+    
+    if (scoreLine && !scoreLine.includes('X/6')) {
+      gameScores.wordle = 1;  // Base point for completion
+      
+      const guessMatch = scoreLine.match(/(\d+)\/6/);
+      if (guessMatch) {
+        const guesses = parseInt(guessMatch[1]);
+        if (guesses <= 3) {
+          gameScores.wordle++;
+          bonusPoints.wordleQuick = true;
+        }
+      }
+    }
+  }
+
+  const totalScore = gameScores.wordle + gameScores.connections + gameScores.strands;
+  return { score: totalScore, bonusPoints, gameScores };
+};
 
   const CONTEST_START_DATE = '2024-12-10'; // Today's date
 
