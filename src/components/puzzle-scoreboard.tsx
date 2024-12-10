@@ -173,24 +173,39 @@ const calculateScores = (text: string): {
 
   // Parse Connections
   if (text.includes('Connections')) {
+    console.log('Found Connections puzzle');
     let score = 0;
     const lines = text.split('\n');
-    const connectionsStartIndex = lines.findIndex(line => line.includes('Connections'));
+    // Change to look for exact "Connections" or include puzzle number
+    const connectionsStartIndex = lines.findIndex(line => 
+      line.trim() === 'Connections' || line.includes('Connections Puzzle #'));
     
-    if (connectionsStartIndex !== -1) {
-      // Get only the lines related to Connections
-      const connectionsLines = lines.slice(connectionsStartIndex);
-      const gridLines = connectionsLines.filter(line => 
-        line.includes('🟪') || line.includes('🟩') || 
-        line.includes('🟦') || line.includes('🟨')
-      );
-
-      if (gridLines.length > 0) {
-        // Check if puzzle is completed
-        const lastLine = gridLines[gridLines.length - 1];
-        const isComplete = ['🟪', '🟩', '🟦', '🟨'].some(color => 
-          lastLine.split(color).length - 1 === 4
+      if (connectionsStartIndex !== -1) {
+        console.log('Found Connections start at line:', connectionsStartIndex);
+        // Get only the lines related to Connections until we find Strands or Wordle
+        const connectionsLines = lines.slice(connectionsStartIndex);
+        const gridLines = connectionsLines.filter(line => 
+          line.includes('🟪') || line.includes('🟩') || 
+          line.includes('🟦') || line.includes('🟨')
         );
+        console.log('Found grid lines:', gridLines);
+
+        if (gridLines.length > 0) {
+          // Check if puzzle is completed
+          const lastLine = gridLines[gridLines.length - 1];
+          console.log('Last grid line:', lastLine);
+          
+          // Check completion with explicit counts
+          const colorCounts = {
+            '🟪': lastLine.split('🟪').length - 1,
+            '🟩': lastLine.split('🟩').length - 1,
+            '🟦': lastLine.split('🟦').length - 1,
+            '🟨': lastLine.split('🟨').length - 1
+          };
+          console.log('Color counts in last line:', colorCounts);
+          
+          const isComplete = Object.values(colorCounts).some(count => count === 4);
+          console.log('Is puzzle complete?', isComplete);
 
         if (isComplete) {
           // Check if there were any errors by looking at previous lines
@@ -208,17 +223,13 @@ const calculateScores = (text: string): {
           });
           const purpleFirst = firstCompletedLine && firstCompletedLine.split('🟪').length - 1 === 4;
 
-          if (purpleFirst) {
+          if (!purpleFirst) {
+            console.log('Purple was not first');
             if (!hasErrors) {
-              score = 3; // Purple first, no errors
-              bonusPoints.connectionsPerfect = true;
-            } else {
-              score = 2; // Purple first, but with errors
-            }
-          } else {
-            if (!hasErrors) {
+              console.log('No errors found, setting score to 2');
               score = 2; // No errors, but purple wasn't first
             } else {
+              console.log('Errors found, setting score to 1');
               score = 1; // Completed with errors
             }
           }
