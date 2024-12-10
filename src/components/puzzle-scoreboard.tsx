@@ -262,7 +262,7 @@ const PuzzleScoreboard: React.FC = () => {
     return { score: totalScore, bonusPoints, gameScores };
   };
 
-  const CONTEST_START_DATE = '2023-12-10';
+  const CONTEST_START_DATE = '2024-12-10'; // Today's date
 
   const fetchAllScores = async () => {
     try {
