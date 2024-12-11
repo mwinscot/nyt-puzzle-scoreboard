@@ -288,10 +288,14 @@ const calculateScores = (text: string): {
     if (strandLines.length > 0) {
       gameScores.strands = 1;  // Base point for completion
       
+      // Flatten the lines to consider each move individually
+      const moves = strandLines.join('').split('');
+      console.log("Moves:", moves);
+
       // Check first three moves for spanagram
-      const firstThreeMoves = strandLines.slice(0, 3);
+      const firstThreeMoves = moves.slice(0, 3);
       console.log("First three moves:", firstThreeMoves);
-      if (firstThreeMoves.some(line => line.includes('🟡'))) {
+      if (firstThreeMoves.some(move => move === '🟡')) {
         gameScores.strands++;
         bonusPoints.strandsSpanagram = true;
       }
