@@ -99,6 +99,14 @@ const TotalScoreHeader: React.FC<TotalScoreHeaderProps> = ({
   );
 };
 
+// Helper function to get the current date in Pacific Time
+const getCurrentDatePT = (): string => {
+  const now = new Date();
+  // Convert to PT (America/Los_Angeles timezone)
+  const ptTime = new Date(now.toLocaleString('en-US', { timeZone: 'America/Los_Angeles' }));
+  return ptTime.toISOString().split('T')[0];
+};
+
 const ScoreCard: React.FC<ScoreCardProps> = ({ title, score, icon: Icon, bonusCount }) => (
   <div className="flex items-center space-x-2 p-4 bg-gray-100 rounded-lg">
     <Icon className="w-6 h-6 text-blue-600" />
@@ -171,22 +179,20 @@ const calculateScores = (text: string): {
     strands: 0
   };
 
+  const lines = text.split('\n').map(line => line.trim()).filter(Boolean);
+
   // Define types for game sections
   type GameType = 'connections' | 'strands' | 'wordle';
-  type GameSection = {
+  type Section = {
     startIndex: number;
     endIndex: number;
   };
-  type GameSections = {
-    [K in GameType]: GameSection;
+  type Sections = {
+    [K in GameType]: Section;
   };
 
-  // Split text into sections based on game headers
-  const lines = text.split('\n').map(line => line.trim()).filter(Boolean);
-  console.log("Processing lines:", lines);
-
   // Find sections
-  const sections: GameSections = {
+  const sections: Sections = {
     connections: {
       startIndex: lines.findIndex(line => line.includes('Connections')),
       endIndex: -1
@@ -202,18 +208,15 @@ const calculateScores = (text: string): {
   };
 
   // Set end indices
-  (Object.keys(sections) as GameType[]).forEach((game, i, arr) => {
+  (Object.keys(sections) as GameType[]).forEach((game) => {
     const currentStart = sections[game].startIndex;
     if (currentStart !== -1) {
-      // Find the next game's start that comes after this one
-      const nextStarts = Object.keys(sections)
-        .map(g => sections[g as GameType].startIndex)
+      const nextStarts = Object.values(sections)
+        .map(section => section.startIndex)
         .filter(index => index > currentStart);
       sections[game].endIndex = nextStarts.length > 0 ? Math.min(...nextStarts) : lines.length;
     }
   });
-
-  console.log("Found sections:", sections);
 
   // Parse Connections
   if (sections.connections.startIndex !== -1) {
@@ -221,15 +224,56 @@ const calculateScores = (text: string): {
       .slice(sections.connections.startIndex, sections.connections.endIndex)
       .filter(line => ['🟨', '🟪', '🟦', '🟩'].some(emoji => line.includes(emoji)));
     
-    console.log("Connection lines:", connectionLines);
-
     if (connectionLines.length > 0) {
-      gameScores.connections = 1;  // Base point for completion
+      // Check if puzzle was completed (has all colors)
+      const hasAllColors = ['🟨', '🟪', '🟦', '🟩'].every(color => 
+        connectionLines.some(line => line.includes(color))
+      );
       
-      // Check for additional points logic here
-      // Assuming some logic to calculate additional points
-      // For example, checking for specific patterns or conditions
-      // Update gameScores.connections accordingly
+      if (!hasAllColors) {
+        gameScores.connections = 0; // Incomplete puzzle
+      } else {
+        // Check for errors by looking at duplicate attempts
+        const seenColors = new Set();
+        const hasErrors = connectionLines.some((line) => {
+          const colors = ['🟨', '🟪', '🟦', '🟩'].filter(color => line.includes(color));
+          // Check if we've seen this color before
+          const isDuplicate = colors.some(color => seenColors.has(color));
+          // Add colors to seen set
+          colors.forEach(color => seenColors.add(color));
+          return isDuplicate;
+        });
+        
+        // Check if purple (🟪) was found first
+        const purpleIndex = connectionLines.findIndex(line => line.includes('🟪'));
+        const isPurpleFirst = purpleIndex === 0;
+        
+        if (isPurpleFirst && !hasErrors) {
+          gameScores.connections = 3;
+          bonusPoints.connectionsPerfect = true;
+        } else if (isPurpleFirst && hasErrors) {
+          gameScores.connections = 2;
+        } else if (!hasErrors) {
+          gameScores.connections = 2;
+        } else if (hasErrors) {
+          gameScores.connections = 1;
+        }
+
+        // If there are too many attempts at multiple colors, score should be 0
+        type ColorCount = { [key: string]: number };
+        const colorCounts: ColorCount = connectionLines.reduce((acc: ColorCount, line) => {
+          ['🟨', '🟪', '🟦', '🟩'].forEach(color => {
+            if (line.includes(color)) {
+              acc[color] = (acc[color] || 0) + 1;
+            }
+          });
+          return acc;
+        }, {});
+
+        if (Object.values(colorCounts).some((count: number) => count > 2)) {
+          gameScores.connections = 0;
+        }
+      }
     }
   }
 
@@ -239,19 +283,11 @@ const calculateScores = (text: string): {
       .slice(sections.strands.startIndex, sections.strands.endIndex)
       .filter(line => ['🔵', '🟡'].some(emoji => line.includes(emoji)));
     
-    console.log("Strand lines:", strandLines);
-
     if (strandLines.length > 0) {
       gameScores.strands = 1;  // Base point for completion
       
-      // Flatten the lines to consider each move individually
-      const moves = strandLines.join('').split('');
-      console.log("Moves:", moves);
-
-      // Check first three moves for spanagram
-      const firstThreeMoves = moves.slice(0, 3);
-      console.log("First three moves:", firstThreeMoves);
-      if (firstThreeMoves.some(move => move === '🟡')) {
+      // Check first line for spanagram
+      if (strandLines[0].includes('🟡')) {
         gameScores.strands++;
         bonusPoints.strandsSpanagram = true;
       }
@@ -260,15 +296,14 @@ const calculateScores = (text: string): {
 
   // Parse Wordle
   if (sections.wordle.startIndex !== -1) {
-    const wordleLines = lines.slice(sections.wordle.startIndex, sections.wordle.endIndex);
-    const scoreLine = wordleLines.find(line => line.includes('/6'));
+    const wordleLines = lines
+      .slice(sections.wordle.startIndex, sections.wordle.endIndex)
+      .filter(line => line.includes('/6'));
     
-    console.log("Wordle lines:", wordleLines);
-
-    if (scoreLine && !scoreLine.includes('X/6')) {
-      gameScores.wordle = 1;
+    if (wordleLines.length > 0 && !wordleLines[0].includes('X/6')) {
+      gameScores.wordle = 1;  // Base point for completion
       
-      const guessMatch = scoreLine.match(/(\d+)\/6/);
+      const guessMatch = wordleLines[0].match(/(\d+)\/6/);
       if (guessMatch) {
         const guesses = parseInt(guessMatch[1]);
         if (guesses <= 3) {
@@ -280,11 +315,6 @@ const calculateScores = (text: string): {
   }
 
   const totalScore = gameScores.wordle + gameScores.connections + gameScores.strands;
-  console.log("Final scores:", {
-    totalScore,
-    gameScores,
-    bonusPoints
-  });
   
   return { score: totalScore, bonusPoints, gameScores };
 };
