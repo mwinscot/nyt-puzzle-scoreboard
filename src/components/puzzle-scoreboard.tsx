@@ -187,7 +187,6 @@ const calculateScores = (text: string): {
 
   const lines = text.split('\n').map(line => line.trim()).filter(Boolean);
 
-  // Define types for game sections
   type GameType = 'connections' | 'strands' | 'wordle';
   type Section = {
     startIndex: number;
@@ -239,49 +238,40 @@ const calculateScores = (text: string): {
       if (!hasAllColors) {
         gameScores.connections = 0; // Incomplete puzzle
       } else {
-        // Check for errors by looking at duplicate attempts
-        const seenColors = new Set();
-        const hasErrors = connectionLines.some((line) => {
-          // Get all colors in this line
-          const colors = ['🟨', '🟪', '🟦', '🟩'].filter(color => line.includes(color));
-          
-          // Check if ANY of these colors were seen before
-          const hasDuplicate = colors.some(color => seenColors.has(color));
-          
-          // Add all colors from this line to seen set
-          colors.forEach(color => seenColors.add(color));
-          
-          return hasDuplicate;
-        });
-        
-        // Check if purple (🟪) was found first
-        const purpleIndex = connectionLines.findIndex(line => line.includes('🟪'));
-        const isPurpleFirst = purpleIndex === 0;
-        
-        if (isPurpleFirst && !hasErrors) {
-          gameScores.connections = 3;
-          bonusPoints.connectionsPerfect = true;
-        } else if (isPurpleFirst && hasErrors) {
-          gameScores.connections = 2;
-        } else if (!hasErrors) {
-          gameScores.connections = 2;
-        } else if (hasErrors) {
-          gameScores.connections = 1;
-        }
+        // Track when each color was first seen
+        const colorFirstAppearance: Record<string, number> = {};
+        let hasErrors = false;
 
-        // If there are too many attempts at multiple colors, score should be 0
-        type ColorCount = { [key: string]: number };
-        const colorCounts: ColorCount = connectionLines.reduce((acc: ColorCount, line) => {
-          ['🟨', '🟪', '🟦', '🟩'].forEach(color => {
-            if (line.includes(color)) {
-              acc[color] = (acc[color] || 0) + 1;
+        connectionLines.forEach((line, index) => {
+          const colorsInLine = ['🟨', '🟪', '🟦', '🟩'].filter(color => line.includes(color));
+          
+          colorsInLine.forEach(color => {
+            if (colorFirstAppearance[color] !== undefined) {
+              // We've seen this color before - it's an error
+              hasErrors = true;
+            } else {
+              // First time seeing this color
+              colorFirstAppearance[color] = index;
             }
           });
-          return acc;
-        }, {});
+        });
 
-        if (Object.values(colorCounts).some((count: number) => count > 2)) {
-          gameScores.connections = 0;
+        // Check if purple was found first
+        const purpleIndex = connectionLines.findIndex(line => line.includes('🟪'));
+        const isPurpleFirst = purpleIndex === 0;
+
+        // Strict scoring rules
+        if (hasErrors) {
+          // With errors, maximum score is 1
+          gameScores.connections = 1;
+        } else {
+          // No errors
+          if (isPurpleFirst) {
+            gameScores.connections = 3;
+            bonusPoints.connectionsPerfect = true;
+          } else {
+            gameScores.connections = 2;
+          }
         }
       }
     }
@@ -289,22 +279,21 @@ const calculateScores = (text: string): {
 
   // Parse Strands
   if (sections.strands.startIndex !== -1) {
-    // Get all strand lines that contain moves
     const strandLines = lines
       .slice(sections.strands.startIndex, sections.strands.endIndex)
       .filter(line => line.includes('🔵') || line.includes('🟡'));
     
     if (strandLines.length > 0) {
-      // Get all moves in sequence
-      const allMoves = strandLines.reduce((moves: string[], line) => {
-        const lineMoves = [...line].filter(char => char === '🔵' || char === '🟡');
-        return moves.concat(lineMoves);
-      }, []);
+      gameScores.strands = 1;  // Base point for completion
       
-      // Base point for completing the puzzle
-      gameScores.strands = 1;
-      
-      // Check yellow circle position (1-based index)
+      // Get all moves into a single array
+      const allMoves: string[] = [];
+      for (const line of strandLines) {
+        const moves = [...line].filter(char => char === '🔵' || char === '🟡');
+        allMoves.push(...moves);
+      }
+
+      // Find position of yellow circle (1-based index)
       const yellowPosition = allMoves.findIndex(move => move === '🟡') + 1;
       if (yellowPosition > 0 && yellowPosition <= 3) {
         gameScores.strands++;
