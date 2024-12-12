@@ -100,11 +100,17 @@ const TotalScoreHeader: React.FC<TotalScoreHeaderProps> = ({
 };
 
 // Helper function to get the current date in Pacific Time
-const getCurrentDatePT = (): string => {
+export const getCurrentDatePST = (): string => {
+  // Create a date object for the current time
   const now = new Date();
-  // Convert to PT (America/Los_Angeles timezone)
-  const ptTime = new Date(now.toLocaleString('en-US', { timeZone: 'America/Los_Angeles' }));
-  return ptTime.toISOString().split('T')[0];
+  
+  // Convert to Pacific Time (America/Los_Angeles handles both PST and PDT automatically)
+  const pstDate = new Date(now.toLocaleString('en-US', {
+    timeZone: 'America/Los_Angeles'
+  }));
+  
+  // Format as YYYY-MM-DD
+  return pstDate.toISOString().split('T')[0];
 };
 
 const ScoreCard: React.FC<ScoreCardProps> = ({ title, score, icon: Icon, bonusCount }) => (
