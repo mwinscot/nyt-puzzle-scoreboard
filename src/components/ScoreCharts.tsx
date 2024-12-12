@@ -31,8 +31,8 @@ interface ChartProps {
 }
 
 const ScoreCharts: React.FC<ChartProps> = ({ scores }) => {
-  // Process data for line chart
-  const getDailyData = () => {
+  // Process data for cumulative line chart
+  const getCumulativeData = () => {
     const dates = Array.from(
       new Set([
         ...Object.keys(scores.player1.dailyScores),
@@ -41,12 +41,23 @@ const ScoreCharts: React.FC<ChartProps> = ({ scores }) => {
       ])
     ).sort();
 
-    return dates.map(date => ({
-      date,
-      Keith: scores.player1.dailyScores[date]?.total || 0,
-      Mike: scores.player2.dailyScores[date]?.total || 0,
-      Colleen: scores.player3.dailyScores[date]?.total || 0,
-    }));
+    let keithTotal = 0;
+    let mikeTotal = 0;
+    let colleenTotal = 0;
+
+    return dates.map(date => {
+      // Add daily scores to running totals
+      keithTotal += scores.player1.dailyScores[date]?.total || 0;
+      mikeTotal += scores.player2.dailyScores[date]?.total || 0;
+      colleenTotal += scores.player3.dailyScores[date]?.total || 0;
+
+      return {
+        date,
+        Keith: keithTotal,
+        Mike: mikeTotal,
+        Colleen: colleenTotal,
+      };
+    });
   };
 
   // Process data for stacked bar chart
@@ -78,12 +89,12 @@ const ScoreCharts: React.FC<ChartProps> = ({ scores }) => {
       {/* Total Score Trends */}
       <Card>
         <CardHeader>
-          <CardTitle>Total Score Trends</CardTitle>
+          <CardTitle>Cumulative Score Progress</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="h-96">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={getDailyData()}>
+              <LineChart data={getCumulativeData()}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis 
                   dataKey="date" 
