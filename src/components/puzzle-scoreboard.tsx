@@ -5,7 +5,7 @@ import { Trophy, Target, Puzzle, Brain, Star } from 'lucide-react';
 import { supabase, publicSupabase, Database } from '@/lib/supabase';
 import { PlayerScores, PlayerData, PlayerKey, PlayerName, DailyScore, BonusPoints } from '@/types';
 import { AdminAuth } from './AdminAuth';
-import ScoreHistoryChart from './ScoreHistoryChart';
+import ScoreCharts from '@/components/ScoreCharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface TotalScoreHeaderProps {
@@ -678,7 +678,7 @@ const calculateScores = (text: string): {
         </div>
 
         {/* Score History Chart */}
-        <ScoreHistoryChart scores={scores} />
+        <ScoreCharts scores={scores} />
 
         {/* Rules Section */}
         <Card className="mt-8 bg-gray-50">
