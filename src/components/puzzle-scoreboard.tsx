@@ -286,11 +286,12 @@ const calculateScores = (text: string): {
     if (strandLines.length > 0) {
       gameScores.strands = 1;  // Base point for completion
       
-      // Check first line for spanagram
-      if (strandLines[0].includes('🟡')) {
+      // Check if spanagram (🟡) appears in first three moves
+    const spanagramIndex = strandLines.findIndex(line => line.includes('🟡'));
+    if (spanagramIndex !== -1 && spanagramIndex < 3) {  // Index < 3 means within first three moves
         gameScores.strands++;
         bonusPoints.strandsSpanagram = true;
-      }
+    }
     }
   }
 
