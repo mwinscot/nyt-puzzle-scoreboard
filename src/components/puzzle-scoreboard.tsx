@@ -242,12 +242,16 @@ const calculateScores = (text: string): {
         // Check for errors by looking at duplicate attempts
         const seenColors = new Set();
         const hasErrors = connectionLines.some((line) => {
+          // Get all colors in this line
           const colors = ['🟨', '🟪', '🟦', '🟩'].filter(color => line.includes(color));
-          // Check if we've seen this color before
-          const isDuplicate = colors.some(color => seenColors.has(color));
-          // Add colors to seen set
+          
+          // Check if ANY of these colors were seen before
+          const hasDuplicate = colors.some(color => seenColors.has(color));
+          
+          // Add all colors from this line to seen set
           colors.forEach(color => seenColors.add(color));
-          return isDuplicate;
+          
+          return hasDuplicate;
         });
         
         // Check if purple (🟪) was found first
