@@ -279,19 +279,27 @@ const calculateScores = (text: string): {
 
   // Parse Strands
   if (sections.strands.startIndex !== -1) {
+    // Get all strand lines that contain moves
     const strandLines = lines
       .slice(sections.strands.startIndex, sections.strands.endIndex)
-      .filter(line => ['🔵', '🟡'].some(emoji => line.includes(emoji)));
+      .filter(line => line.includes('🔵') || line.includes('🟡'));
     
     if (strandLines.length > 0) {
-      gameScores.strands = 1;  // Base point for completion
+      // Get all moves in sequence
+      const allMoves = strandLines.reduce((moves: string[], line) => {
+        const lineMoves = [...line].filter(char => char === '🔵' || char === '🟡');
+        return moves.concat(lineMoves);
+      }, []);
       
-      // Check if spanagram (🟡) appears in first three moves
-    const spanagramIndex = strandLines.findIndex(line => line.includes('🟡'));
-    if (spanagramIndex !== -1 && spanagramIndex < 3) {  // Index < 3 means within first three moves
+      // Base point for completing the puzzle
+      gameScores.strands = 1;
+      
+      // Check yellow circle position (1-based index)
+      const yellowPosition = allMoves.findIndex(move => move === '🟡') + 1;
+      if (yellowPosition > 0 && yellowPosition <= 3) {
         gameScores.strands++;
         bonusPoints.strandsSpanagram = true;
-    }
+      }
     }
   }
 
