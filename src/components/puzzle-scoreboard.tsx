@@ -8,6 +8,13 @@ import { AdminAuth } from './AdminAuth';
 import ScoreCharts from '@/components/ScoreCharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
+const getCurrentDatePST = (): string => {
+  const now = new Date();
+  const pstDate = new Date(now.toLocaleString('en-US', {
+    timeZone: 'America/Los_Angeles'
+  }));
+  return pstDate.toISOString().split('T')[0];
+};
 interface TotalScoreHeaderProps {
   player1Score: number;
   player2Score: number;
@@ -97,20 +104,6 @@ const TotalScoreHeader: React.FC<TotalScoreHeaderProps> = ({
       </div>
     </div>
   );
-};
-
-// Helper function to get the current date in Pacific Time
-export const getCurrentDatePST = (): string => {
-  // Create a date object for the current time
-  const now = new Date();
-  
-  // Convert to Pacific Time (America/Los_Angeles handles both PST and PDT automatically)
-  const pstDate = new Date(now.toLocaleString('en-US', {
-    timeZone: 'America/Los_Angeles'
-  }));
-  
-  // Format as YYYY-MM-DD
-  return pstDate.toISOString().split('T')[0];
 };
 
 const ScoreCard: React.FC<ScoreCardProps> = ({ title, score, icon: Icon, bonusCount }) => (
@@ -395,7 +388,12 @@ const calculateScores = (text: string): {
       scores.player2.dailyScores[date],
       scores.player3.dailyScores[date]
     ];
-    return date === new Date().toISOString().split('T')[0] && 
+  
+    const today = getCurrentDatePST();
+    const yesterday = new Date(new Date(today).setDate(new Date(today).getDate() - 1))
+      .toISOString().split('T')[0];
+    
+    return (date === today || date === yesterday) && 
            (!playerScores.some(score => score?.finalized));
   };
 
