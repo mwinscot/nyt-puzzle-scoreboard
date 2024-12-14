@@ -222,49 +222,40 @@ const calculateScores = (text: string): {
       .slice(sections.connections.startIndex, sections.connections.endIndex)
       .filter(line => ['🟨', '🟪', '🟦', '🟩'].some(emoji => line.includes(emoji)));
     
-    if (connectionLines.length > 0) {
-      // Check if puzzle was completed (has all colors)
-      const hasAllColors = ['🟨', '🟪', '🟦', '🟩'].every(color => 
-        connectionLines.some(line => line.includes(color))
-      );
-      
-      if (!hasAllColors) {
-        gameScores.connections = 0; // Incomplete puzzle
-      } else {
-        // Track when each color was first seen
-        const colorFirstAppearance: Record<string, number> = {};
-        let hasErrors = false;
+    if (connectionLines.length === 0) {
+      gameScores.connections = 0;
+    } else {
+      // First check if puzzle is complete by checking last line has single color
+      const lastLine = connectionLines[connectionLines.length - 1];
+      const colorsInLastLine = ['🟨', '🟪', '🟦', '🟩'].filter(color => 
+        lastLine.includes(color)
+      ).length;
 
-        connectionLines.forEach((line, index) => {
-          const colorsInLine = ['🟨', '🟪', '🟦', '🟩'].filter(color => line.includes(color));
-          
-          colorsInLine.forEach(color => {
-            if (colorFirstAppearance[color] !== undefined) {
-              // We've seen this color before - it's an error
-              hasErrors = true;
-            } else {
-              // First time seeing this color
-              colorFirstAppearance[color] = index;
-            }
-          });
+      // If last line has multiple colors, puzzle is incomplete
+      if (colorsInLastLine !== 1) {
+        gameScores.connections = 0;
+      } else {
+        // Check if purple was found first
+        const firstLine = connectionLines[0];
+        const isPurpleFirst = (firstLine.match(/🟪/g) || []).length === 4;
+
+        // Look for errors (multiple colors) in any lines except the last
+        const hasErrors = connectionLines.slice(0, -1).some(line => {
+          const colorsInLine = ['🟨', '🟪', '🟦', '🟩'].filter(color => 
+            line.includes(color)
+          ).length;
+          return colorsInLine > 1;
         });
 
-        // Check if purple was found first
-        const purpleIndex = connectionLines.findIndex(line => line.includes('🟪'));
-        const isPurpleFirst = purpleIndex === 0;
-
-        // Strict scoring rules
-        if (hasErrors) {
-          // With errors, maximum score is 1
-          gameScores.connections = 1;
+        // Apply scoring rules:
+        // - Purple first, no errors: 3 points
+        // - Purple first with errors: 2 points
+        // - Not purple first, no errors: 2 points
+        // - Not purple first, with errors: 1 point
+        if (isPurpleFirst) {
+          gameScores.connections = hasErrors ? 2 : 3;
         } else {
-          // No errors
-          if (isPurpleFirst) {
-            gameScores.connections = 3;
-            bonusPoints.connectionsPerfect = true;
-          } else {
-            gameScores.connections = 2;
-          }
+          gameScores.connections = hasErrors ? 1 : 2;
         }
       }
     }
