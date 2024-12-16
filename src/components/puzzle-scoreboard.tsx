@@ -265,23 +265,30 @@ const calculateScores = (text: string): {
   if (sections.strands.startIndex !== -1) {
     const strandLines = lines
       .slice(sections.strands.startIndex, sections.strands.endIndex)
-      .filter(line => line.includes('🔵') || line.includes('🟡'));
+      .filter(line => line.includes('🔵') || line.includes('🟡') || line.includes('💡'));
     
     if (strandLines.length > 0) {
-      gameScores.strands = 1;  // Base point for completion
+      // Check if any hints (💡) were used
+      const hintsUsed = strandLines.some(line => line.includes('💡'));
       
-      // Get all moves into a single array
-      const allMoves: string[] = [];
-      for (const line of strandLines) {
-        const moves = [...line].filter(char => char === '🔵' || char === '🟡');
-        allMoves.push(...moves);
-      }
+      if (!hintsUsed) {
+        gameScores.strands = 1;  // Base point for completion without hints
+        
+        // Get all moves into a single array
+        const allMoves: string[] = [];
+        for (const line of strandLines) {
+          const moves = [...line].filter(char => char === '🔵' || char === '🟡');
+          allMoves.push(...moves);
+        }
 
-      // Find position of yellow circle (1-based index)
-      const yellowPosition = allMoves.findIndex(move => move === '🟡') + 1;
-      if (yellowPosition > 0 && yellowPosition <= 3) {
-        gameScores.strands++;
-        bonusPoints.strandsSpanagram = true;
+        // Find position of yellow circle (1-based index)
+        const yellowPosition = allMoves.findIndex(move => move === '🟡') + 1;
+        if (yellowPosition > 0 && yellowPosition <= 3) {
+          gameScores.strands++;
+          bonusPoints.strandsSpanagram = true;
+        }
+      } else {
+        gameScores.strands = 0; // No points if hints were used
       }
     }
   }
