@@ -7,6 +7,7 @@ import { PlayerScores, PlayerData, PlayerKey, PlayerName, DailyScore, BonusPoint
 import { AdminAuth } from './AdminAuth';
 import ScoreCharts from '@/components/ScoreCharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import Link from 'next/link';
 
 const getCurrentDatePST = (): string => {
   const now = new Date();
@@ -59,7 +60,7 @@ const initialPlayerData = (): PlayerData => ({
   }
 });
 
-const TotalScoreHeader: React.FC<TotalScoreHeaderProps> = ({ 
+export const TotalScoreHeader: React.FC<TotalScoreHeaderProps> = ({ 
   player1Score, 
   player2Score, 
   player3Score, 
@@ -318,8 +319,17 @@ const calculateScores = (text: string): {
   return { score: totalScore, bonusPoints, gameScores };
 };
 
-  const CONTEST_START_DATE = '2024-12-10'; // Today's date
+const getMonthDateRange = () => {
+  const now = new Date();
+  const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+  const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  return {
+    start: firstDay.toISOString().split('T')[0],
+    end: lastDay.toISOString().split('T')[0]
+  };
+};
 
+const { start: CONTEST_START_DATE } = getMonthDateRange();
   const fetchAllScores = async () => {
     try {
       const { data: scoresData, error } = await publicSupabase
@@ -375,6 +385,52 @@ const calculateScores = (text: string): {
       case 'Keith': return 'player1';
       case 'Mike': return 'player2';
       case 'Colleen': return 'player3';
+    }
+  };
+
+  const archiveMonth = async (date: string) => {
+    if (!isAdmin) return;
+    
+    const yearMonth = date.substring(0, 7);
+    const monthStart = `${yearMonth}-01`;
+    const monthEnd = new Date(yearMonth + '-01');
+    monthEnd.setMonth(monthEnd.getMonth() + 1);
+    monthEnd.setDate(0);
+    
+    try {
+      const { data: archiveData, error: archiveError } = await supabase
+        .from('monthly_archives')
+        .insert([
+          {
+            month: date,
+            player_id: 1,
+            total_score: scores.player1.total,
+            total_wordle_bonus: scores.player1.totalBonuses.wordle,
+            total_connections_bonus: scores.player1.totalBonuses.connections,
+            total_strands_bonus: scores.player1.totalBonuses.strands
+          },
+          {
+            month: date,
+            player_id: 2,
+            total_score: scores.player2.total,
+            total_wordle_bonus: scores.player2.totalBonuses.wordle,
+            total_connections_bonus: scores.player2.totalBonuses.connections,
+            total_strands_bonus: scores.player2.totalBonuses.strands
+          },
+          {
+            month: date,
+            player_id: 3,
+            total_score: scores.player3.total,
+            total_wordle_bonus: scores.player3.totalBonuses.wordle,
+            total_connections_bonus: scores.player3.totalBonuses.connections,
+            total_strands_bonus: scores.player3.totalBonuses.strands
+          }
+        ]);
+  
+      if (archiveError) throw archiveError;
+      
+    } catch (error) {
+      console.error('Error archiving month:', error);
     }
   };
 
@@ -458,7 +514,26 @@ const calculateScores = (text: string): {
   const renderScoreboard = () => (
     <div className="w-full max-w-4xl bg-white rounded-lg shadow-sm border">
       <div className="p-6">
-        <h2 className="text-2xl font-bold text-center text-gray-900">NYT Puzzle Competition Scoreboard</h2>
+        <div className="mb-4">
+  <h3 className="text-lg font-semibold mb-2">Monthly Archives</h3>
+  <div className="flex gap-2">
+    {Array.from({ length: 12 }).map((_, i) => {
+      const date = new Date();
+      date.setMonth(date.getMonth() - i);
+      const archiveDate = date.toISOString().split('T')[0].substring(0, 7);
+      return (
+        <Link 
+          key={archiveDate}
+          href={`/archive/${archiveDate}`}
+          className="px-3 py-1 bg-gray-100 rounded hover:bg-gray-200"
+        >
+          {date.toLocaleString('default', { month: 'short', year: '2-digit' })}
+        </Link>
+      );
+    })}
+  </div>
+</div>
+<h2 className="text-2xl font-bold text-center text-gray-900">NYT Puzzle Competition Scoreboard</h2>
         
         <div className="mt-4 text-center">
           <input
