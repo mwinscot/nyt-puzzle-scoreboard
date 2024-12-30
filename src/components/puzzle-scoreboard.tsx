@@ -138,25 +138,17 @@ const PuzzleScoreboard: React.FC = () => {
   });
 
   useEffect(() => {
-    // Check if user is already authenticated
-    const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      setIsAdmin(!!session);
+    const fetchData = async () => {
+      const { data: scoresData, error } = await publicSupabase
+        .from('daily_scores')
+        .select(`*`)
+        .gte('date', CONTEST_START_DATE);
+        
+      console.log('Raw scores data:', scoresData);
+      console.log('Contest start date:', CONTEST_START_DATE);
     };
-    
-    checkAuth();
-
-  // Update the auth state change handler
-  const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-    setIsAdmin(!!session);
-  });
-
-  fetchAllScores();
-
-  return () => {
-    subscription.unsubscribe();
-  };
-}, []);
+    fetchData();
+  }, []);
 
 const calculateScores = (text: string): { 
   score: number, 
