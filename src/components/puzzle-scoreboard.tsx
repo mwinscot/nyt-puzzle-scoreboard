@@ -327,19 +327,20 @@ const getMonthDateRange = () => {
 };
 
 const { start: CONTEST_START_DATE } = getMonthDateRange();
-  const fetchAllScores = async () => {
-    try {
-      const { data: scoresData, error } = await publicSupabase
-        .from('daily_scores')
-        .select(`
-          *,
-          players (
-            name
-          )
-        `)
-        .gte('date', CONTEST_START_DATE);
+const fetchAllScores = async () => {
+  try {
+    console.log('Fetching scores...');
+    const { data: scoresData, error } = await publicSupabase
+      .from('daily_scores')
+      .select(`
+        *,
+        players (
+          name
+        )
+      `);
 
-      if (error) throw error;
+    console.log('Fetched data:', scoresData);
+    if (error) console.error('Fetch error:', error);
 
       const newScores: PlayerScores = {
         player1: initialPlayerData(),
