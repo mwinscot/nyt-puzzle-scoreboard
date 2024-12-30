@@ -9,6 +9,12 @@ import ScoreCharts from '@/components/ScoreCharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import Link from 'next/link';
 
+console.log('publicSupabase:', publicSupabase);
+console.log('supabase config:', {
+  url: process.env.NEXT_PUBLIC_SUPABASE_URL,
+  key: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.substring(0,5) + '...'
+});
+
 const getCurrentDatePST = (): string => {
   const now = new Date();
   const pstDate = new Date(now.toLocaleString('en-US', {
