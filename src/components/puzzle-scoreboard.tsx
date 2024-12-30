@@ -139,17 +139,12 @@ const PuzzleScoreboard: React.FC = () => {
 
   useEffect(() => {
     const fetchData = async () => {
-      const { data: scoresData, error } = await publicSupabase
+      const { data, error } = await publicSupabase
         .from('daily_scores')
-        .select(`
-          *,
-          players (
-            name
-          )
-        `);
-  
-      console.log('Raw scores data:', scoresData);
-      console.log('Contest start date:', CONTEST_START_DATE);
+        .select('*');
+      
+      if (error) console.error('Error:', error);
+      if (data) console.log('All scores:', data);
     };
     fetchData();
   }, []);
