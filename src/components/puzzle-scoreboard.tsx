@@ -141,9 +141,13 @@ const PuzzleScoreboard: React.FC = () => {
     const fetchData = async () => {
       const { data: scoresData, error } = await publicSupabase
         .from('daily_scores')
-        .select(`*`)
-        .gte('date', CONTEST_START_DATE);
-        
+        .select(`
+          *,
+          players (
+            name
+          )
+        `);
+  
       console.log('Raw scores data:', scoresData);
       console.log('Contest start date:', CONTEST_START_DATE);
     };
