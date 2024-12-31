@@ -592,6 +592,23 @@ const calculateScores = (text: string): {
           </div>
         </div>
 
+{/* Total Score Header */}
+<TotalScoreHeader
+          player1Score={Object.values(scores.player1.dailyScores).reduce((acc, score) => acc + score.total, 0)}
+          player2Score={Object.values(scores.player2.dailyScores).reduce((acc, score) => acc + score.total, 0)}
+          player3Score={Object.values(scores.player3.dailyScores).reduce((acc, score) => acc + score.total, 0)}
+          player1Name={player1Name}
+          player2Name={player2Name}
+          player3Name={player3Name}
+        />
+        
+        {/* Scoreboard */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <ScoreCard playername={player1Name} score={scores.player1.total} title="Total Score" icon={Star} />
+          <ScoreCard playername={player2Name} score={scores.player2.total} title="Total Score" icon={Star} />
+          <ScoreCard playername={player3Name} score={scores.player3.total} title="Total Score" icon={Star} />
+        </div>
+
         {/* Score History Chart */}
         <ScoreCharts scores={scores} />
 

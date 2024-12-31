@@ -7,6 +7,7 @@ interface ScoreCardProps {
   score: number;
   icon: React.ElementType;
   bonusCount?: number;
+  playername?: string;
 }
 
 export const ScoreCard: React.FC<ScoreCardProps> = ({ title, score, icon: Icon, bonusCount }) => (
