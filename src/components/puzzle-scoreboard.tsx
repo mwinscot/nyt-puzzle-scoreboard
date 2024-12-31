@@ -6,6 +6,7 @@ import { PlayerScores, PlayerData, PlayerKey, PlayerName, BonusPoints } from '@/
 import { AdminAuth } from './AdminAuth';
 import ScoreCharts from '@/components/ScoreCharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ScoreCard } from '@/components/ScoreCard';
 
 const getCurrentDatePST = (): string => {
  const pstNow = new Date().toLocaleString("en-US", {
@@ -14,6 +15,7 @@ const getCurrentDatePST = (): string => {
  });
  return new Date(pstNow).toISOString().split('T')[0];
 };
+
 
 interface ScoreRecord {
  id: number;
@@ -377,22 +379,7 @@ const calculateScores = (text: string): {
     }
   };
  
-  const calculateScores = (input: string) => {
-    // Implement your score calculation logic here
-    // This is a placeholder implementation
-    const score = 0;
-    const bonusPoints = {
-      wordleQuick: false,
-      connectionsPerfect: false,
-      strandsSpanagram: false
-    };
-    const gameScores = {
-      wordle: 0,
-      connections: 0,
-      strands: 0
-    };
-    return { score, bonusPoints, gameScores };
-  };
+  // Removed duplicate calculateScores function
   
   const finalizeDayScores = async () => {
     if (!isAdmin) return;
