@@ -1,42 +1,22 @@
-import React, { useState, useEffect } from 'react';
-import { Session, User, SupabaseClient } from '@supabase/supabase-js';
-import { AuthChangeEvent } from '@supabase/supabase-js';
+import React, { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
 import { Trophy, Target, Puzzle, Brain, Star } from 'lucide-react';
-import { supabase, publicSupabase, Database } from '@/lib/supabase';
+import { supabase, publicSupabase } from '@/lib/supabase';
 import { PlayerScores, PlayerData, PlayerKey, PlayerName, DailyScore, BonusPoints } from '@/types';
 import { AdminAuth } from './AdminAuth';
 import ScoreCharts from '@/components/ScoreCharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import Link from 'next/link';
+import { getMonthDateRange } from '@/utils/dateUtils';
 
-console.log('publicSupabase:', publicSupabase);
-console.log('supabase config:', {
-  url: process.env.NEXT_PUBLIC_SUPABASE_URL,
-  key: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.substring(0,5) + '...'
-});
+// Continue with current interfaces and ScoreCard component
 
 const getCurrentDatePST = (): string => {
-  const now = new Date();
-  const pstDate = new Date(now.toLocaleString('en-US', {
-    timeZone: 'America/Los_Angeles'
-  }));
-  return pstDate.toISOString().split('T')[0];
+  const pstNow = new Date().toLocaleString("en-US", {
+    timeZone: "America/Los_Angeles",
+    hour12: false,
+  });
+  return new Date(pstNow).toISOString().split('T')[0];
 };
-interface TotalScoreHeaderProps {
-  player1Score: number;
-  player2Score: number;
-  player3Score: number;
-  player1Name: string;
-  player2Name: string;
-  player3Name: string;
-}
-
-interface ScoreCardProps {
-  title: string;
-  score: number;
-  icon: React.ElementType;
-  bonusCount?: number;
-}
 
 interface ScoreRecord {
   id: number;
@@ -56,6 +36,22 @@ interface ScoreRecord {
   };
 }
 
+interface TotalScoreHeaderProps {
+  player1Score: number;
+  player2Score: number;
+  player3Score: number;
+  player1Name: string;
+  player2Name: string;
+  player3Name: string;
+}
+
+interface ScoreCardProps {
+  title: string;
+  score: number;
+  icon: React.ElementType;
+  bonusCount?: number;
+}
+
 const initialPlayerData = (): PlayerData => ({
   dailyScores: {},
   total: 0,
@@ -66,7 +62,7 @@ const initialPlayerData = (): PlayerData => ({
   }
 });
 
-export const TotalScoreHeader: React.FC<TotalScoreHeaderProps> = ({ 
+const TotalScoreHeader: React.FC<TotalScoreHeaderProps> = ({ 
   player1Score, 
   player2Score, 
   player3Score, 
@@ -131,216 +127,29 @@ const ScoreCard: React.FC<ScoreCardProps> = ({ title, score, icon: Icon, bonusCo
 
 const PuzzleScoreboard: React.FC = () => {
   const [isAdmin, setIsAdmin] = useState(false);
-  const [player1Name, setPlayer1Name] = useState<string>('Keith');
-  const [player2Name, setPlayer2Name] = useState<string>('Mike');
-  const [player3Name, setPlayer3Name] = useState<string>('Colleen');
+  const [player1Name] = useState<string>('Keith');
+  const [player2Name] = useState<string>('Mike');
+  const [player3Name] = useState<string>('Colleen');
   const [inputText, setInputText] = useState<string>('');
   const [currentEntry, setCurrentEntry] = useState<PlayerKey | null>(null);
-  const [currentDate, setCurrentDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [currentDate, setCurrentDate] = useState<string>(getCurrentDatePST());
   const [scores, setScores] = useState<PlayerScores>({
     player1: initialPlayerData(),
     player2: initialPlayerData(),
     player3: initialPlayerData()
   });
 
-  useEffect(() => {
-    const fetchData = async () => {
-      const { data, error } = await publicSupabase
+  const { start: monthStart } = getMonthDateRange();
+
+  const fetchAllScores = useCallback(async () => {
+    try {
+      console.log('Month start date:', monthStart);
+      const { data: scoresData, error } = await publicSupabase
         .from('daily_scores')
-        .select('*');
-      
-      if (error) console.error('Error:', error);
-      if (data) console.log('All scores:', data);
-    };
-    fetchData();
-  }, []);
+        .select(`*, players (name)`)
+        .gte('date', monthStart);
 
-const calculateScores = (text: string): { 
-  score: number, 
-  bonusPoints: BonusPoints, 
-  gameScores: { 
-    wordle: number, 
-    connections: number, 
-    strands: number 
-  } 
-} => {
-  const bonusPoints: BonusPoints = {
-    wordleQuick: false,
-    connectionsPerfect: false,
-    strandsSpanagram: false
-  };
-  
-  const gameScores = {
-    wordle: 0,
-    connections: 0,
-    strands: 0
-  };
-
-  const lines = text.split('\n').map(line => line.trim()).filter(Boolean);
-
-  type GameType = 'connections' | 'strands' | 'wordle';
-  type Section = {
-    startIndex: number;
-    endIndex: number;
-  };
-  type Sections = {
-    [K in GameType]: Section;
-  };
-
-  // Find sections
-  const sections: Sections = {
-    connections: {
-      startIndex: lines.findIndex(line => line.includes('Connections')),
-      endIndex: -1
-    },
-    strands: {
-      startIndex: lines.findIndex(line => line.includes('Strands')),
-      endIndex: -1
-    },
-    wordle: {
-      startIndex: lines.findIndex(line => line.includes('Wordle')),
-      endIndex: -1
-    }
-  };
-
-  // Set end indices
-  (Object.keys(sections) as GameType[]).forEach((game) => {
-    const currentStart = sections[game].startIndex;
-    if (currentStart !== -1) {
-      const nextStarts = Object.values(sections)
-        .map(section => section.startIndex)
-        .filter(index => index > currentStart);
-      sections[game].endIndex = nextStarts.length > 0 ? Math.min(...nextStarts) : lines.length;
-    }
-  });
-
-  // Parse Connections
-  if (sections.connections.startIndex !== -1) {
-    const connectionLines = lines
-      .slice(sections.connections.startIndex, sections.connections.endIndex)
-      .filter(line => ['🟨', '🟪', '🟦', '🟩'].some(emoji => line.includes(emoji)));
-    
-    if (connectionLines.length === 0) {
-      gameScores.connections = 0;
-    } else {
-      // First check if puzzle is complete by checking last line has single color
-      const lastLine = connectionLines[connectionLines.length - 1];
-      const colorsInLastLine = ['🟨', '🟪', '🟦', '🟩'].filter(color => 
-        lastLine.includes(color)
-      ).length;
-
-      // If last line has multiple colors, puzzle is incomplete
-      if (colorsInLastLine !== 1) {
-        gameScores.connections = 0;
-      } else {
-        // Check if purple was found first
-        const firstLine = connectionLines[0];
-        const isPurpleFirst = (firstLine.match(/🟪/g) || []).length === 4;
-
-        // Look for errors (multiple colors) in any lines except the last
-        const hasErrors = connectionLines.slice(0, -1).some(line => {
-          const colorsInLine = ['🟨', '🟪', '🟦', '🟩'].filter(color => 
-            line.includes(color)
-          ).length;
-          return colorsInLine > 1;
-        });
-
-        // Apply scoring rules:
-        // - Purple first, no errors: 3 points
-        // - Purple first with errors: 2 points
-        // - Not purple first, no errors: 2 points
-        // - Not purple first, with errors: 1 point
-        if (isPurpleFirst) {
-          gameScores.connections = hasErrors ? 2 : 3;
-        } else {
-          gameScores.connections = hasErrors ? 1 : 2;
-        }
-      }
-    }
-  }
-
-  // Parse Strands
-  if (sections.strands.startIndex !== -1) {
-    const strandLines = lines
-      .slice(sections.strands.startIndex, sections.strands.endIndex)
-      .filter(line => line.includes('🔵') || line.includes('🟡') || line.includes('💡'));
-    
-    if (strandLines.length > 0) {
-      // Check if any hints (💡) were used
-      const hintsUsed = strandLines.some(line => line.includes('💡'));
-      
-      if (!hintsUsed) {
-        gameScores.strands = 1;  // Base point for completion without hints
-        
-        // Get all moves into a single array
-        const allMoves: string[] = [];
-        for (const line of strandLines) {
-          const moves = [...line].filter(char => char === '🔵' || char === '🟡');
-          allMoves.push(...moves);
-        }
-
-        // Find position of yellow circle (1-based index)
-        const yellowPosition = allMoves.findIndex(move => move === '🟡') + 1;
-        if (yellowPosition > 0 && yellowPosition <= 3) {
-          gameScores.strands++;
-          bonusPoints.strandsSpanagram = true;
-        }
-      } else {
-        gameScores.strands = 0; // No points if hints were used
-      }
-    }
-  }
-
-  // Parse Wordle
-  if (sections.wordle.startIndex !== -1) {
-    const wordleLines = lines
-      .slice(sections.wordle.startIndex, sections.wordle.endIndex)
-      .filter(line => line.includes('/6'));
-    
-    if (wordleLines.length > 0 && !wordleLines[0].includes('X/6')) {
-      gameScores.wordle = 1;  // Base point for completion
-      
-      const guessMatch = wordleLines[0].match(/(\d+)\/6/);
-      if (guessMatch) {
-        const guesses = parseInt(guessMatch[1]);
-        if (guesses <= 3) {
-          gameScores.wordle++;
-          bonusPoints.wordleQuick = true;
-        }
-      }
-    }
-  }
-
-  const totalScore = gameScores.wordle + gameScores.connections + gameScores.strands;
-  
-  return { score: totalScore, bonusPoints, gameScores };
-};
-
-const getMonthDateRange = () => {
-  const now = new Date();
-  const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
-  const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-  return {
-    start: firstDay.toISOString().split('T')[0],
-    end: lastDay.toISOString().split('T')[0]
-  };
-};
-
-const { start: CONTEST_START_DATE } = getMonthDateRange();
-const fetchAllScores = async () => {
-  try {
-    console.log('Fetching scores...');
-    const { data: scoresData, error } = await publicSupabase
-      .from('daily_scores')
-      .select(`
-        *,
-        players (
-          name
-        )
-      `);
-
-    console.log('Fetched data:', scoresData);
-    if (error) console.error('Fetch error:', error);
+      if (error) throw error;
 
       const newScores: PlayerScores = {
         player1: initialPlayerData(),
@@ -349,9 +158,7 @@ const fetchAllScores = async () => {
       };
 
       scoresData?.forEach((score: ScoreRecord) => {
-        const playerName = score.players.name as PlayerName;
-        const playerKey = getPlayerKeyFromName(playerName);
-        
+        const playerKey = getPlayerKeyFromName(score.players.name as PlayerName);
         newScores[playerKey].dailyScores[score.date] = {
           date: score.date,
           wordle: score.wordle,
@@ -376,7 +183,22 @@ const fetchAllScores = async () => {
     } catch (error) {
       console.error('Error fetching scores:', error);
     }
-  };
+  }, [monthStart]);
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setIsAdmin(!!session);
+    };
+    
+    checkAuth();
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
+      setIsAdmin(!!session);
+    });
+
+    fetchAllScores();
+    return () => subscription.unsubscribe();
+  }, [fetchAllScores]);
 
   const getPlayerKeyFromName = (name: PlayerName): PlayerKey => {
     switch (name) {
@@ -386,22 +208,31 @@ const fetchAllScores = async () => {
     }
   };
 
+  const canEditDate = (date: string, scores: PlayerScores): boolean => {
+    if (!isAdmin) return false;
+    const playerScores = [
+      scores.player1.dailyScores[date],
+      scores.player2.dailyScores[date],
+      scores.player3.dailyScores[date]
+    ];
+    const today = getCurrentDatePST();
+    const yesterday = new Date(new Date(today).setDate(new Date(today).getDate() - 1))
+      .toISOString().split('T')[0];
+    
+    return (date === today || date === yesterday) && 
+           (!playerScores.some(score => score?.finalized));
+  };
+
   const archiveMonth = async (date: string) => {
     if (!isAdmin) return;
     
-    const yearMonth = date.substring(0, 7);
-    const monthStart = `${yearMonth}-01`;
-    const monthEnd = new Date(yearMonth + '-01');
-    monthEnd.setMonth(monthEnd.getMonth() + 1);
-    monthEnd.setDate(0);
-    
     try {
-      const { data: archiveData, error: archiveError } = await supabase
+      const { error: archiveError } = await supabase
         .from('monthly_archives')
         .insert([
           {
             month: date,
-            player_id: 1,
+            player_id: 1, 
             total_score: scores.player1.total,
             total_wordle_bonus: scores.player1.totalBonuses.wordle,
             total_connections_bonus: scores.player1.totalBonuses.connections,
@@ -424,29 +255,112 @@ const fetchAllScores = async () => {
             total_strands_bonus: scores.player3.totalBonuses.strands
           }
         ]);
-  
+
       if (archiveError) throw archiveError;
-      
     } catch (error) {
       console.error('Error archiving month:', error);
     }
   };
 
-  const canEditDate = (date: string, scores: PlayerScores): boolean => {
-    if (!isAdmin) return false;
+  const calculateScores = (text: string): { 
+    score: number, 
+    bonusPoints: BonusPoints, 
+    gameScores: { wordle: number, connections: number, strands: number } 
+  } => {
+    const bonusPoints: BonusPoints = {
+      wordleQuick: false,
+      connectionsPerfect: false,
+      strandsSpanagram: false
+    };
     
-    const playerScores = [
-      scores.player1.dailyScores[date],
-      scores.player2.dailyScores[date],
-      scores.player3.dailyScores[date]
-    ];
-  
-    const today = getCurrentDatePST();
-    const yesterday = new Date(new Date(today).setDate(new Date(today).getDate() - 1))
-      .toISOString().split('T')[0];
-    
-    return (date === today || date === yesterday) && 
-           (!playerScores.some(score => score?.finalized));
+    const gameScores = { wordle: 0, connections: 0, strands: 0 };
+    const lines = text.split('\n').map(line => line.trim()).filter(Boolean);
+
+    const sections = {
+      connections: { startIndex: lines.findIndex(line => line.includes('Connections')), endIndex: -1 },
+      strands: { startIndex: lines.findIndex(line => line.includes('Strands')), endIndex: -1 },
+      wordle: { startIndex: lines.findIndex(line => line.includes('Wordle')), endIndex: -1 }
+    };
+
+    (Object.keys(sections) as Array<keyof typeof sections>).forEach((game) => {
+      const currentStart = sections[game].startIndex;
+      if (currentStart !== -1) {
+        const nextStarts = Object.values(sections)
+          .map(section => section.startIndex)
+          .filter(index => index > currentStart);
+        sections[game].endIndex = nextStarts.length > 0 ? Math.min(...nextStarts) : lines.length;
+      }
+    });
+
+    // Parse Connections
+    if (sections.connections.startIndex !== -1) {
+      const connectionLines = lines
+        .slice(sections.connections.startIndex, sections.connections.endIndex)
+        .filter(line => ['🟨', '🟪', '🟦', '🟩'].some(emoji => line.includes(emoji)));
+      
+      if (connectionLines.length > 0) {
+        const lastLine = connectionLines[connectionLines.length - 1];
+        const colorsInLastLine = ['🟨', '🟪', '🟦', '🟩'].filter(color => lastLine.includes(color)).length;
+
+        if (colorsInLastLine === 1) {
+          const firstLine = connectionLines[0];
+          const isPurpleFirst = (firstLine.match(/🟪/g) || []).length === 4;
+          const hasErrors = connectionLines.slice(0, -1).some(line => 
+            ['🟨', '🟪', '🟦', '🟩'].filter(color => line.includes(color)).length > 1
+          );
+
+          if (isPurpleFirst) {
+            gameScores.connections = hasErrors ? 2 : 3;
+          } else {
+            gameScores.connections = hasErrors ? 1 : 2;
+          }
+        }
+      }
+    }
+
+    // Parse Strands
+    if (sections.strands.startIndex !== -1) {
+      const strandLines = lines
+        .slice(sections.strands.startIndex, sections.strands.endIndex)
+        .filter(line => line.includes('🔵') || line.includes('🟡') || line.includes('💡'));
+      
+      if (strandLines.length > 0 && !strandLines.some(line => line.includes('💡'))) {
+        gameScores.strands = 1;
+        
+        const allMoves = strandLines.flatMap(line => 
+          [...line].filter(char => char === '🔵' || char === '🟡')
+        );
+
+        const yellowPosition = allMoves.findIndex(move => move === '🟡') + 1;
+        if (yellowPosition > 0 && yellowPosition <= 3) {
+          gameScores.strands++;
+          bonusPoints.strandsSpanagram = true;
+        }
+      }
+    }
+
+    // Parse Wordle
+    if (sections.wordle.startIndex !== -1) {
+      const wordleLines = lines
+        .slice(sections.wordle.startIndex, sections.wordle.endIndex)
+        .filter(line => line.includes('/6'));
+      
+      if (wordleLines.length > 0 && !wordleLines[0].includes('X/6')) {
+        gameScores.wordle = 1;
+        
+        const guessMatch = wordleLines[0].match(/(\d+)\/6/);
+        if (guessMatch && parseInt(guessMatch[1]) <= 3) {
+          gameScores.wordle++;
+          bonusPoints.wordleQuick = true;
+        }
+      }
+    }
+
+    return { 
+      score: gameScores.wordle + gameScores.connections + gameScores.strands, 
+      bonusPoints, 
+      gameScores 
+    };
   };
 
   const handleSubmit = async () => {
@@ -454,7 +368,6 @@ const fetchAllScores = async () => {
 
     try {
       const { score, bonusPoints, gameScores } = calculateScores(inputText);
-      
       const playerName = currentEntry === 'player1' ? 'Keith' : 
                         currentEntry === 'player2' ? 'Mike' : 'Colleen';
 
@@ -486,7 +399,6 @@ const fetchAllScores = async () => {
       await fetchAllScores();
       setInputText('');
       setCurrentEntry(null);
-
     } catch (error) {
       console.error('Error submitting score:', error);
     }
@@ -494,7 +406,6 @@ const fetchAllScores = async () => {
 
   const finalizeDayScores = async () => {
     if (!isAdmin) return;
-    
     try {
       const { error } = await supabase
         .from('daily_scores')
@@ -502,7 +413,6 @@ const fetchAllScores = async () => {
         .eq('date', currentDate);
 
       if (error) throw error;
-
       await fetchAllScores();
     } catch (error) {
       console.error('Error finalizing scores:', error);
@@ -513,25 +423,26 @@ const fetchAllScores = async () => {
     <div className="w-full max-w-4xl bg-white rounded-lg shadow-sm border">
       <div className="p-6">
         <div className="mb-4">
-  <h3 className="text-lg font-semibold mb-2">Monthly Archives</h3>
-  <div className="flex gap-2">
-    {Array.from({ length: 12 }).map((_, i) => {
-      const date = new Date();
-      date.setMonth(date.getMonth() - i);
-      const archiveDate = date.toISOString().split('T')[0].substring(0, 7);
-      return (
-        <Link 
-          key={archiveDate}
-          href={`/archive/${archiveDate}`}
-          className="px-3 py-1 bg-gray-100 rounded hover:bg-gray-200"
-        >
-          {date.toLocaleString('default', { month: 'short', year: '2-digit' })}
-        </Link>
-      );
-    })}
-  </div>
-</div>
-<h2 className="text-2xl font-bold text-center text-gray-900">NYT Puzzle Competition Scoreboard</h2>
+          <h3 className="text-lg font-semibold mb-2">Monthly Archives</h3>
+          <div className="flex gap-2">
+            {Array.from({ length: 12 }).map((_, i) => {
+              const date = new Date();
+              date.setMonth(date.getMonth() - i);
+              const archiveDate = date.toISOString().split('T')[0].substring(0, 7);
+              return (
+                <Link 
+                  key={archiveDate}
+                  href={`/archive/${archiveDate}`}
+                  className="px-3 py-1 bg-gray-100 rounded hover:bg-gray-200"
+                >
+                  {date.toLocaleString('default', { month: 'short', year: '2-digit' })}
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+
+        <h2 className="text-2xl font-bold text-center text-gray-900">NYT Puzzle Competition Scoreboard</h2>
         
         <div className="mt-4 text-center">
           <input
@@ -553,50 +464,26 @@ const fetchAllScores = async () => {
 
         {isAdmin && (
           <>
-            {/* Player Selection */}
             <div className="flex space-x-4 mb-4">
-              <button
-                onClick={() => setCurrentEntry('player1')}
-                disabled={!canEditDate(currentDate, scores)}
-                className={`p-2 rounded-md flex-1 ${
-                  currentEntry === 'player1' 
-                    ? 'bg-blue-500 text-white' 
-                    : canEditDate(currentDate, scores)
-                      ? 'bg-gray-200 hover:bg-gray-300'
-                      : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                }`}
-              >
-                Keith's Entry
-              </button>
-              <button
-                onClick={() => setCurrentEntry('player2')}
-                disabled={!canEditDate(currentDate, scores)}
-                className={`p-2 rounded-md flex-1 ${
-                  currentEntry === 'player2'
-                    ? 'bg-blue-500 text-white'
-                    : canEditDate(currentDate, scores)
-                    ? 'bg-gray-200 hover:bg-gray-300'
-                    : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                }`}
-              >
-                Mike's Entry
-              </button>
-              <button
-                onClick={() => setCurrentEntry('player3')}
-                disabled={!canEditDate(currentDate, scores)}
-                className={`p-2 rounded-md flex-1 ${
-                  currentEntry === 'player3'
-                    ? 'bg-blue-500 text-white'
-                    : canEditDate(currentDate, scores)
-                    ? 'bg-gray-200 hover:bg-gray-300'
-                    : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                }`}
-              >
-                Colleen's Entry
-              </button>
+              {['player1', 'player2', 'player3'].map((player) => (
+                <button
+                  key={player}
+                  onClick={() => setCurrentEntry(player as PlayerKey)}
+                  disabled={!canEditDate(currentDate, scores)}
+                  className={`p-2 rounded-md flex-1 ${
+                    currentEntry === player 
+                      ? 'bg-blue-500 text-white' 
+                      : canEditDate(currentDate, scores)
+                        ? 'bg-gray-200 hover:bg-gray-300'
+                        : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                  }`}
+                >
+                  {player === 'player1' ? "Keith's" : 
+                   player === 'player2' ? "Mike's" : "Colleen's"} Entry
+                </button>
+              ))}
             </div>
 
-            {/* Results Input */}
             <div className="mb-4">
               <textarea
                 value={inputText}
@@ -613,7 +500,6 @@ const fetchAllScores = async () => {
               />
             </div>
 
-            {/* Submit and Clear Buttons */}
             <div className="flex justify-end space-x-4 mb-4">
               <button
                 onClick={handleSubmit}
@@ -637,7 +523,6 @@ const fetchAllScores = async () => {
               </button>
             </div>
 
-            {/* Finalize Day Button */}
             <div className="flex justify-center mb-8">
               <button
                 onClick={finalizeDayScores}
@@ -649,106 +534,49 @@ const fetchAllScores = async () => {
           </>
         )}
 
-        {/* Daily Scores Grid */}
         <div className="grid grid-cols-3 gap-8 mb-8">
-          {/* Player 1 Scores */}
-          <div className="space-y-4">
-            <h3 className="text-xl font-bold">Keith</h3>
-            <ScoreCard 
-              title="Wordle Wins" 
-              score={scores.player1.dailyScores[currentDate]?.wordle || 0} 
-              icon={Target}
-              bonusCount={scores.player1.dailyScores[currentDate]?.bonusPoints.wordleQuick ? 1 : 0}
-            />
-            <ScoreCard 
-              title="Connections Wins" 
-              score={scores.player1.dailyScores[currentDate]?.connections || 0} 
-              icon={Puzzle}
-              bonusCount={scores.player1.dailyScores[currentDate]?.bonusPoints.connectionsPerfect ? 1 : 0}
-            />
-            <ScoreCard 
-              title="Strands Wins" 
-              score={scores.player1.dailyScores[currentDate]?.strands || 0} 
-              icon={Brain}
-              bonusCount={scores.player1.dailyScores[currentDate]?.bonusPoints.strandsSpanagram ? 1 : 0}
-            />
-            <div className="text-sm text-gray-600">
-              Total Bonus Points: 
-              <span className="ml-2">Wordle ({scores.player1.totalBonuses.wordle})</span>
-              <span className="ml-2">Connections ({scores.player1.totalBonuses.connections})</span>
-              <span className="ml-2">Strands ({scores.player1.totalBonuses.strands})</span>
-            </div>
-          </div>
+          {['Keith', 'Mike', 'Colleen'].map((name, index) => {
+            const playerKey = `player${index + 1}` as PlayerKey;
+            return (
+              <div key={name} className="space-y-4">
+                <h3 className="text-xl font-bold">{name}</h3>
+                <ScoreCard 
+                  title="Wordle Wins" 
+                  score={scores[playerKey].dailyScores[currentDate]?.wordle || 0} 
+                  icon={Target}
+                  bonusCount={scores[playerKey].dailyScores[currentDate]?.bonusPoints.wordleQuick ? 1 : 0}
+                />
+                <ScoreCard 
+                  title="Connections Wins" 
+                  score={scores[playerKey].dailyScores[currentDate]?.connections || 0} 
+                  icon={Puzzle}
+                  bonusCount={scores[playerKey].dailyScores[currentDate]?.bonusPoints.connectionsPerfect ? 1 : 0}
+                />
+                <ScoreCard 
+                  title="Strands Wins" 
+                  score={scores[playerKey].dailyScores[currentDate]?.strands || 0} 
+                  icon={Brain}
+                  bonusCount={scores[playerKey].dailyScores[currentDate]?.bonusPoints.strandsSpanagram ? 1 : 0}
+                />
 
-          {/* Player 2 Scores */}
-          <div className="space-y-4">
-            <h3 className="text-xl font-bold">Mike</h3>
-            <ScoreCard 
-              title="Wordle Wins" 
-              score={scores.player2.dailyScores[currentDate]?.wordle || 0} 
-              icon={Target}
-              bonusCount={scores.player2.dailyScores[currentDate]?.bonusPoints.wordleQuick ? 1 : 0}
-            />
-            <ScoreCard 
-              title="Connections Wins" 
-              score={scores.player2.dailyScores[currentDate]?.connections || 0} 
-              icon={Puzzle}
-              bonusCount={scores.player2.dailyScores[currentDate]?.bonusPoints.connectionsPerfect ? 1 : 0}
-            />
-            <ScoreCard 
-              title="Strands Wins" 
-              score={scores.player2.dailyScores[currentDate]?.strands || 0} 
-              icon={Brain}
-              bonusCount={scores.player2.dailyScores[currentDate]?.bonusPoints.strandsSpanagram ? 1 : 0}
-            />
-            <div className="text-sm text-gray-600">
-              Total Bonus Points: 
-              <span className="ml-2">Wordle ({scores.player2.totalBonuses.wordle})</span>
-              <span className="ml-2">Connections ({scores.player2.totalBonuses.connections})</span>
-              <span className="ml-2">Strands ({scores.player2.totalBonuses.strands})</span>
-            </div>
-          </div>
-
-          {/* Player 3 Scores */}
-          <div className="space-y-4">
-            <h3 className="text-xl font-bold">Colleen</h3>
-            <ScoreCard 
-              title="Wordle Wins" 
-              score={scores.player3.dailyScores[currentDate]?.wordle || 0} 
-              icon={Target}
-              bonusCount={scores.player3.dailyScores[currentDate]?.bonusPoints.wordleQuick ? 1 : 0}
-            />
-            <ScoreCard 
-              title="Connections Wins" 
-              score={scores.player3.dailyScores[currentDate]?.connections || 0} 
-              icon={Puzzle}
-              bonusCount={scores.player3.dailyScores[currentDate]?.bonusPoints.connectionsPerfect ? 1 : 0}
-            />
-            <ScoreCard 
-              title="Strands Wins" 
-              score={scores.player3.dailyScores[currentDate]?.strands || 0} 
-              icon={Brain}
-              bonusCount={scores.player3.dailyScores[currentDate]?.bonusPoints.strandsSpanagram ? 1 : 0}
-            />
-            <div className="text-sm text-gray-600">
-              Total Bonus Points: 
-              <span className="ml-2">Wordle ({scores.player3.totalBonuses.wordle})</span>
-              <span className="ml-2">Connections ({scores.player3.totalBonuses.connections})</span>
-              <span className="ml-2">Strands ({scores.player3.totalBonuses.strands})</span>
-            </div>
-          </div>
+<div className="text-sm text-gray-600">
+                  Total Bonus Points: 
+                  <span className="ml-2">Wordle ({scores[playerKey].totalBonuses.wordle})</span>
+                  <span className="ml-2">Connections ({scores[playerKey].totalBonuses.connections})</span>
+                  <span className="ml-2">Strands ({scores[playerKey].totalBonuses.strands})</span>
+                </div>
+              </div>
+            )
+          })}
         </div>
 
-        {/* Score History Chart */}
         <ScoreCharts scores={scores} />
 
-        {/* Rules Section */}
         <Card className="mt-8 bg-gray-50">
           <CardHeader>
             <CardTitle className="text-xl font-semibold text-gray-900">Game Rules & Scoring</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
-            {/* Wordle Rules */}
             <div>
               <h3 className="text-lg font-semibold mb-2 text-gray-900">Wordle</h3>
               <ul className="list-disc pl-6 space-y-1 text-gray-800">
@@ -759,7 +587,6 @@ const fetchAllScores = async () => {
 
             <div className="my-4 border-t border-gray-200" />
 
-            {/* Connections Rules */}
             <div>
               <h3 className="text-lg font-semibold mb-2 text-gray-900">Connections</h3>
               <ul className="list-disc pl-6 space-y-1 text-gray-800">
@@ -772,7 +599,6 @@ const fetchAllScores = async () => {
 
             <div className="my-4 border-t border-gray-200" />
 
-            {/* Strands Rules */}
             <div>
               <h3 className="text-lg font-semibold mb-2 text-gray-900">Strands</h3>
               <ul className="list-disc pl-6 space-y-1 text-gray-800">
@@ -786,7 +612,6 @@ const fetchAllScores = async () => {
     </div>
   );
 
-  // Main render
   return (
     <div className="w-full max-w-4xl mx-auto">
       {!isAdmin && <AdminAuth onLogin={() => setIsAdmin(true)} />}
