@@ -62,7 +62,7 @@ const initialPlayerData = (): PlayerData => ({
   }
 });
 
-const TotalScoreHeader: React.FC<TotalScoreHeaderProps> = ({ 
+export const TotalScoreHeader: React.FC<TotalScoreHeaderProps> = ({ 
   player1Score, 
   player2Score, 
   player3Score, 

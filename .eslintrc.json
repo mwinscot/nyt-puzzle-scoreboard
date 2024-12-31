@@ -1,6 +1,18 @@
 {
-  "extends": "next/core-web-vitals",
+  "extends": ["eslint:recommended", "plugin:react/recommended"],
+  "parserOptions": {
+    "ecmaVersion": 2020,
+    "sourceType": "module",
+    "ecmaFeatures": {
+      "jsx": true
+    }
+  },
   "rules": {
-    // Add any custom rules here
+    // Your custom rules
+  },
+  "settings": {
+    "react": {
+      "version": "detect"
+    }
   }
 }
