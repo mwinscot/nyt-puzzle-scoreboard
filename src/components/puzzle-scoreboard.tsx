@@ -7,6 +7,8 @@ import { AdminAuth } from './AdminAuth';
 import ScoreCharts from '@/components/ScoreCharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScoreCard } from '@/components/ScoreCard';
+import { TotalScoreHeader } from '@/components/TotalScoreHeader';
+
 
 const getCurrentDatePST = (): string => {
  const pstNow = new Date().toLocaleString("en-US", {
