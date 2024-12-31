@@ -3,11 +3,28 @@ import React from 'react';
 import { Card } from '@/components/ui/card';
 import ScoreCharts from '@/components/ScoreCharts';
 import { PlayerScores } from '@/types';
-import { TotalScoreHeader } from '@/components/puzzle-scoreboard';
 interface MonthlyArchiveProps {
   month: string;
   scores: PlayerScores;
 }
+
+interface TotalScoreHeaderProps {
+  player1Score: number;
+  player2Score: number;
+  player3Score: number;
+  player1Name: string;
+  player2Name: string;
+  player3Name: string;
+}
+
+const TotalScoreHeader: React.FC<TotalScoreHeaderProps> = ({ player1Score, player2Score, player3Score, player1Name, player2Name, player3Name }) => (
+  <div>
+    <h2>Total Scores</h2>
+    <p>{player1Name}: {player1Score}</p>
+    <p>{player2Name}: {player2Score}</p>
+    <p>{player3Name}: {player3Score}</p>
+  </div>
+);
 
 const MonthlyArchive: React.FC<MonthlyArchiveProps> = ({ month, scores }) => (
   <div className="w-full max-w-4xl mx-auto p-6">

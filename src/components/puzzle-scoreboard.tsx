@@ -7,7 +7,7 @@ import { AdminAuth } from './AdminAuth';
 import ScoreCharts from '@/components/ScoreCharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { getMonthDateRange } from '@/utils/dateUtils';
-import { TotalScoreHeader } from './TotalScoreHeader';
+import { TotalScoreHeader } from '@/components/TotalScoreHeader'; // Corrected import path
 import { ScoreCard } from './ScoreCard';
 
 const getCurrentDatePST = (): string => {
