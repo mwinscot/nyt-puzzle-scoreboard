@@ -277,9 +277,6 @@ const calculateScores = (text: string): {
 
   const fetchAllScores = async () => {
     try {
-      // Debug query
-      console.log('Fetching scores from:', CONTEST_START_DATE);
-      
       const { data: scoresData, error } = await publicSupabase
         .from('daily_scores')
         .select(`
@@ -287,26 +284,25 @@ const calculateScores = (text: string): {
           players (
             name
           )
-        `);  // Removed date filter temporarily
+        `)
+        .order('date', { ascending: true });
 
       if (error) throw error;
-      console.log('Raw DB data:', scoresData);
-  
+      console.log('Raw scores before processing:', scoresData);
+
       const newScores: PlayerScores = {
         player1: initialPlayerData(),
         player2: initialPlayerData(),
         player3: initialPlayerData()
       };
-  
+
       scoresData?.forEach((score: ScoreRecord) => {
+        console.log('Processing score record:', score);
         const playerName = score.players.name as PlayerName;
         const playerKey = getPlayerKeyFromName(playerName);
         
-        // Convert the date to PST before using it as a key
-        const pstDate = convertToPST(score.date);
-        
-        newScores[playerKey].dailyScores[pstDate] = {
-          date: pstDate,
+        newScores[playerKey].dailyScores[score.date] = {
+          date: score.date,
           wordle: score.wordle,
           connections: score.connections,
           strands: score.strands,
@@ -318,19 +314,19 @@ const calculateScores = (text: string): {
           },
           finalized: score.finalized
         };
-  
+
         newScores[playerKey].total += score.total;
         if (score.bonus_wordle) newScores[playerKey].totalBonuses.wordle++;
         if (score.bonus_connections) newScores[playerKey].totalBonuses.connections++;
         if (score.bonus_strands) newScores[playerKey].totalBonuses.strands++;
       });
-  
+
+      console.log('Processed scores:', newScores);
       setScores(newScores);
     } catch (error) {
       console.error('Error fetching scores:', error);
     }
   };
-
   const getPlayerKeyFromName = (name: PlayerName): PlayerKey => {
     switch (name) {
       case 'Keith': return 'player1';
