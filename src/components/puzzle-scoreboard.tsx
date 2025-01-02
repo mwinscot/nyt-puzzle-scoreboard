@@ -289,7 +289,7 @@ const calculateScores = (text: string): {
             name
           )
         `)
-        .gte('date', '2024-12-10')
+        .gte('date', 'CONTEST_START_DATE')
         .order('date', { ascending: true });
 
       if (error) throw error;
