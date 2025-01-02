@@ -7,6 +7,7 @@ import ScoreCharts from '@/components/ScoreCharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScoreCard } from '@/components/ScoreCard';
 import { TotalScoreHeader } from '@/components/TotalScoreHeader';
+import Link from 'next/link';
 
 
 const getCurrentDatePST = (): string => {

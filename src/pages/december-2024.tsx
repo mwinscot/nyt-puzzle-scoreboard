@@ -2,10 +2,12 @@ import React, { useEffect, useState } from 'react';
 import { publicSupabase } from '@/lib/supabase';
 import ScoreCharts from '@/components/ScoreCharts';
 import { TotalScoreHeader } from '@/components/TotalScoreHeader';
-import { PlayerScores, PlayerName } from '@/types';
+import { PlayerScores, PlayerName, PlayerData } from '@/types';
 
-type ScoreRecord = {
+interface ScoreRecord {
+  id: number;
   date: string;
+  player_id: number;
   wordle: number;
   connections: number;
   strands: number;
@@ -15,16 +17,27 @@ type ScoreRecord = {
   bonus_strands: boolean;
   finalized: boolean;
   players: {
-    name: PlayerName;
+    name: string;
   };
-};
+}
 
 const DecemberScoreboard = () => {
+  const initialPlayerData = (): PlayerData => ({
+    dailyScores: {},
+    total: 0,
+    totalBonuses: {
+      wordle: 0,
+      connections: 0,
+      strands: 0
+    }
+  });
+
+  // Include player4 in the initial state but it won't be used for December
   const [scores, setScores] = useState<PlayerScores>({
-    player1: { dailyScores: {}, total: 0, totalBonuses: { wordle: 0, connections: 0, strands: 0 } },
-    player2: { dailyScores: {}, total: 0, totalBonuses: { wordle: 0, connections: 0, strands: 0 } },
-    player3: { dailyScores: {}, total: 0, totalBonuses: { wordle: 0, connections: 0, strands: 0 } },
-    player4: { dailyScores: {}, total: 0, totalBonuses: { wordle: 0, connections: 0, strands: 0 } }
+    player1: initialPlayerData(),
+    player2: initialPlayerData(),
+    player3: initialPlayerData(),
+    player4: initialPlayerData()
   });
 
   useEffect(() => {
@@ -47,10 +60,10 @@ const DecemberScoreboard = () => {
       }
 
       const newScores: PlayerScores = {
-        player1: { dailyScores: {}, total: 0, totalBonuses: { wordle: 0, connections: 0, strands: 0 } },
-        player2: { dailyScores: {}, total: 0, totalBonuses: { wordle: 0, connections: 0, strands: 0 } },
-        player3: { dailyScores: {}, total: 0, totalBonuses: { wordle: 0, connections: 0, strands: 0 } },
-        player4: { dailyScores: {}, total: 0, totalBonuses: { wordle: 0, connections: 0, strands: 0 } }
+        player1: initialPlayerData(),
+        player2: initialPlayerData(),
+        player3: initialPlayerData(),
+        player4: initialPlayerData()
       };
 
       scoresData?.forEach((score: ScoreRecord) => {
@@ -88,6 +101,7 @@ const DecemberScoreboard = () => {
       case 'Keith': return 'player1';
       case 'Mike': return 'player2';
       case 'Colleen': return 'player3';
+      case 'Toby': return 'player4';
       default: throw new Error('Invalid player name');
     }
   };
