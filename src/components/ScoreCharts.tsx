@@ -1,43 +1,37 @@
 import React from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import { PlayerScores } from '@/types';
+import { convertToPST } from '@/utils/dateUtils';
 
 interface ScoreChartsProps {
   scores: PlayerScores;
 }
 
 const ScoreCharts: React.FC<ScoreChartsProps> = ({ scores }) => {
-  // Get raw data from database
-  const dates = Object.keys(scores.player1.dailyScores);
-  console.log('Raw database dates:', dates);
-  console.log('Raw Colleen scores:', dates.map(date => ({
-    date,
-    score: scores.player3.dailyScores[date]?.total
-  })));
+  const allDates = Object.keys(scores.player1.dailyScores).sort();
 
-  const chartData = dates.map(date => ({
+  const chartData = allDates.map(date => ({
     date,
     Keith: scores.player1.dailyScores[date]?.total || 0,
     Mike: scores.player2.dailyScores[date]?.total || 0,
-    Colleen: scores.player3.dailyScores[date]?.total || 0
-  })).sort((a, b) => a.date.localeCompare(b.date));
-
-  console.log('Chart data:', chartData);
+    Colleen: scores.player3.dailyScores[date]?.total || 0,
+    Toby: scores.player4.dailyScores[date]?.total || 0
+  }));
 
   let keithTotal = 0;
   let mikeTotal = 0;
   let colleenTotal = 0;
+  let tobyTotal = 0;
 
-  const cumulativeData = chartData.map(day => {
-    const result = {
-      date: day.date,
-      Keith: (keithTotal += day.Keith),
-      Mike: (mikeTotal += day.Mike),
-      Colleen: (colleenTotal += day.Colleen)
-    };
-    console.log(`Cumulative for ${day.date}: Colleen=${result.Colleen}`);
-    return result;
-  });
+  const cumulativeData = chartData.map(day => ({
+    date: day.date,
+    Keith: (keithTotal += day.Keith),
+    Mike: (mikeTotal += day.Mike),
+    Colleen: (colleenTotal += day.Colleen),
+    Toby: (tobyTotal += day.Toby)
+  }));
+
+  // Game performance data for individual games
   const gamePerformanceData = [
     {
       name: 'Keith',
@@ -56,6 +50,12 @@ const ScoreCharts: React.FC<ScoreChartsProps> = ({ scores }) => {
       Wordle: Object.values(scores.player3.dailyScores).reduce((sum, day) => sum + (day.wordle || 0), 0),
       Connections: Object.values(scores.player3.dailyScores).reduce((sum, day) => sum + (day.connections || 0), 0),
       Strands: Object.values(scores.player3.dailyScores).reduce((sum, day) => sum + (day.strands || 0), 0)
+    },
+    {
+      name: 'Toby',
+      Wordle: Object.values(scores.player4.dailyScores).reduce((sum, day) => sum + (day.wordle || 0), 0),
+      Connections: Object.values(scores.player4.dailyScores).reduce((sum, day) => sum + (day.connections || 0), 0),
+      Strands: Object.values(scores.player4.dailyScores).reduce((sum, day) => sum + (day.strands || 0), 0)
     }
   ];
 
@@ -73,6 +73,7 @@ const ScoreCharts: React.FC<ScoreChartsProps> = ({ scores }) => {
             <Line type="monotone" dataKey="Keith" stroke="#8884d8" strokeWidth={3} />
             <Line type="monotone" dataKey="Mike" stroke="#82ca9d" strokeWidth={3} />
             <Line type="monotone" dataKey="Colleen" stroke="#ffc658" strokeWidth={3} />
+            <Line type="monotone" dataKey="Toby" stroke="#ff7300" strokeWidth={3} />
           </LineChart>
         </ResponsiveContainer>
       </div>
