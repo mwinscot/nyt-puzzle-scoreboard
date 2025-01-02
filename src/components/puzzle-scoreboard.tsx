@@ -411,12 +411,6 @@ const calculateScores = (text: string): {
           player3Name={player3Name}
         />
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-          <ScoreCard playername={player1Name} score={scores.player1.total} title="Total Score" icon={Star} />
-          <ScoreCard playername={player2Name} score={scores.player2.total} title="Total Score" icon={Star} />
-          <ScoreCard playername={player3Name} score={scores.player3.total} title="Total Score" icon={Star} />
-        </div>
-
         {/* Add Date Selection */}
         {isAdmin && (
           <div className="mb-4">
