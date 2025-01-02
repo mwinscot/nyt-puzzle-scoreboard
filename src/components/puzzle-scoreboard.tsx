@@ -95,7 +95,7 @@ const PuzzleScoreboard: React.FC = () => {
     player4: initialPlayerData()
   });
 
-const CONTEST_START_DATE = '2024-01-01'; // New contest start date
+const CONTEST_START_DATE = '2025-01-01'; // New contest start date
 
   useEffect(() => {
     // Check if user is already authenticated
@@ -281,7 +281,7 @@ const calculateScores = (text: string): {
 
 const fetchAllScores = async () => {
   try {
-    console.log('Fetching scores from date:', '2024-01-01');
+    console.log('Fetching scores from date:', '2025-01-01');
     
     const { data: scoresData, error } = await publicSupabase
       .from('daily_scores')
@@ -291,7 +291,7 @@ const fetchAllScores = async () => {
           name
         )
       `)
-      .gte('date', '2024-01-01')
+      .gte('date', '2025-01-01')
       .order('date', { ascending: true });
 
     if (error) throw error;
