@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import Link from 'next/link';
 import { Trophy, Target, Puzzle, Brain, Star } from 'lucide-react';
 import { supabase, publicSupabase } from '@/lib/supabase';
 import { PlayerScores, PlayerData, PlayerKey, PlayerName, BonusPoints } from '@/types';
@@ -403,6 +402,26 @@ const calculateScores = (text: string): {
     <div className="w-full max-w-4xl mx-auto">
       {!isAdmin && <AdminAuth onLogin={() => setIsAdmin(true)} />}
       <div className="p-6">
+                {/* Move Scoreboard to top */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+          <ScoreCard playername={player1Name} score={scores.player1.total} title="Total Score" icon={Star} />
+          <ScoreCard playername={player2Name} score={scores.player2.total} title="Total Score" icon={Star} />
+          <ScoreCard playername={player3Name} score={scores.player3.total} title="Total Score" icon={Star} />
+        </div>
+
+                {/* Add Date Selection */}
+                {isAdmin && (
+          <div className="mb-4">
+            <input
+              type="date"
+              value={currentDate}
+              onChange={(e) => setCurrentDate(e.target.value)}
+              className="p-2 border rounded"
+              max={getCurrentDatePST()}
+            />
+          </div>
+        )}
+
         {/* Archive button */}
         {isAdmin && (
           <>
@@ -601,13 +620,6 @@ const calculateScores = (text: string): {
           player2Name={player2Name}
           player3Name={player3Name}
         />
-        
-        {/* Scoreboard */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <ScoreCard playername={player1Name} score={scores.player1.total} title="Total Score" icon={Star} />
-          <ScoreCard playername={player2Name} score={scores.player2.total} title="Total Score" icon={Star} />
-          <ScoreCard playername={player3Name} score={scores.player3.total} title="Total Score" icon={Star} />
-        </div>
 
         {/* Score History Chart */}
         <ScoreCharts scores={scores} />
