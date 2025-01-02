@@ -9,10 +9,12 @@ interface ScoreChartsProps {
 
 const ScoreCharts: React.FC<ScoreChartsProps> = ({ scores }) => {
   const dates = Object.keys(scores.player1.dailyScores);
+  console.log("Available dates:", dates);
   
   // Calculate cumulative scores
   const chartData = dates.map(date => {
     const pstDate = convertToPST(date);
+    console.log("Converting date:", date, "to PST:", pstDate);
     return {
       date: pstDate,
       Keith: scores.player1.dailyScores[date]?.total || 0,
@@ -21,17 +23,24 @@ const ScoreCharts: React.FC<ScoreChartsProps> = ({ scores }) => {
     };
   }).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
+  console.log("Chart data:", chartData);
+
   let keithTotal = 0;
   let mikeTotal = 0;
   let colleenTotal = 0;
 
-  const cumulativeData = chartData.map(day => ({
-    date: day.date,
-    Keith: (keithTotal += day.Keith),
-    Mike: (mikeTotal += day.Mike),
-    Colleen: (colleenTotal += day.Colleen)
-  }));
+  const cumulativeData = chartData.map(day => {
+    const result = {
+      date: day.date,
+      Keith: (keithTotal += day.Keith),
+      Mike: (mikeTotal += day.Mike),
+      Colleen: (colleenTotal += day.Colleen)
+    };
+    console.log("Cumulative data point:", result);
+    return result;
+  });
 
+  console.log("Final cumulative data:", cumulativeData);
   // Calculate total game scores for each player
   const gamePerformanceData = [
     {
