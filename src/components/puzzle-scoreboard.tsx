@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { Trophy, Target, Puzzle, Brain, Star } from 'lucide-react';
 import { supabase, publicSupabase } from '@/lib/supabase';
 import { PlayerScores, PlayerData, PlayerKey, PlayerName, BonusPoints } from '@/types';
@@ -7,7 +8,6 @@ import ScoreCharts from '@/components/ScoreCharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScoreCard } from '@/components/ScoreCard';
 import { TotalScoreHeader } from '@/components/TotalScoreHeader';
-import Link from 'next/link';
 
 
 const getCurrentDatePST = (): string => {
@@ -418,6 +418,12 @@ const calculateScores = (text: string): {
     <div className="w-full max-w-4xl mx-auto">
       {!isAdmin && <AdminAuth onLogin={() => setIsAdmin(true)} />}
       <div className="p-6">
+        {/* Add archive link */}
+        <div className="mb-8">
+          <Link href="/december-2024" className="inline-block px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+            View December 2024 Contest Results →
+          </Link>
+        </div>
         <TotalScoreHeader
           player1Score={Object.values(scores.player1.dailyScores).reduce((acc, score) => acc + score.total, 0)}
           player2Score={Object.values(scores.player2.dailyScores).reduce((acc, score) => acc + score.total, 0)}
