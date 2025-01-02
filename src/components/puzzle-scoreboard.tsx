@@ -424,11 +424,6 @@ const fetchAllScores = async () => {
       {!isAdmin && <AdminAuth onLogin={() => setIsAdmin(true)} />}
       <div className="p-6">
         {/* Add archive link */}
-        <div className="mb-8">
-          <Link href="/december-2024" className="inline-block px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
-            View December 2024 Contest Results →
-          </Link>
-        </div>
         <TotalScoreHeader
           player1Score={scores.player1.total}
           player2Score={scores.player2.total}
@@ -686,6 +681,12 @@ const fetchAllScores = async () => {
         {/* Score History Chart */}
         <ScoreCharts scores={scores} />
 
+        <div className="my-8 text-center">
+          <Link href="/december-2024" className="inline-block px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+            View December 2024 Contest Results →
+          </Link>
+        </div>
+        
         {/* Rules Section */}
         <Card className="mt-8 bg-gray-50">
           <CardHeader>
