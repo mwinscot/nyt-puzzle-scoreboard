@@ -402,15 +402,23 @@ const calculateScores = (text: string): {
     <div className="w-full max-w-4xl mx-auto">
       {!isAdmin && <AdminAuth onLogin={() => setIsAdmin(true)} />}
       <div className="p-6">
-                {/* Move Scoreboard to top */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        <TotalScoreHeader
+          player1Score={Object.values(scores.player1.dailyScores).reduce((acc, score) => acc + score.total, 0)}
+          player2Score={Object.values(scores.player2.dailyScores).reduce((acc, score) => acc + score.total, 0)}
+          player3Score={Object.values(scores.player3.dailyScores).reduce((acc, score) => acc + score.total, 0)}
+          player1Name={player1Name}
+          player2Name={player2Name}
+          player3Name={player3Name}
+        />
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
           <ScoreCard playername={player1Name} score={scores.player1.total} title="Total Score" icon={Star} />
           <ScoreCard playername={player2Name} score={scores.player2.total} title="Total Score" icon={Star} />
           <ScoreCard playername={player3Name} score={scores.player3.total} title="Total Score" icon={Star} />
         </div>
 
-                {/* Add Date Selection */}
-                {isAdmin && (
+        {/* Add Date Selection */}
+        {isAdmin && (
           <div className="mb-4">
             <input
               type="date"
