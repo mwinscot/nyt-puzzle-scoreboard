@@ -279,58 +279,63 @@ const calculateScores = (text: string): {
   return { score: totalScore, bonusPoints, gameScores };
 };
 
-  const fetchAllScores = async () => {
-    try {
-      const { data: scoresData, error } = await publicSupabase
-        .from('daily_scores')
-        .select(`
-          *,
-          players (
-            name
-          )
-        `)
-        .gte('date', 'CONTEST_START_DATE')
-        .order('date', { ascending: true });
+const fetchAllScores = async () => {
+  try {
+    console.log('Fetching scores from date:', '2024-01-01');
+    
+    const { data: scoresData, error } = await publicSupabase
+      .from('daily_scores')
+      .select(`
+        *,
+        players (
+          name
+        )
+      `)
+      .gte('date', '2024-01-01')
+      .order('date', { ascending: true });
 
-      if (error) throw error;
+    if (error) throw error;
+    
+    console.log('Raw scores from DB:', scoresData);
 
-      const newScores: PlayerScores = {
-        player1: initialPlayerData(),
-        player2: initialPlayerData(),
-        player3: initialPlayerData(),
-        player4: initialPlayerData()
+    const newScores: PlayerScores = {
+      player1: initialPlayerData(),
+      player2: initialPlayerData(),
+      player3: initialPlayerData(),
+      player4: initialPlayerData()
+    };
+
+    scoresData?.forEach((score: ScoreRecord) => {
+      console.log('Processing score:', score);
+      const playerName = score.players.name as PlayerName;
+      const playerKey = getPlayerKeyFromName(playerName);
+      
+      newScores[playerKey].dailyScores[score.date] = {
+        date: score.date,
+        wordle: score.wordle,
+        connections: score.connections,
+        strands: score.strands,
+        total: score.total,
+        bonusPoints: {
+          wordleQuick: score.bonus_wordle,
+          connectionsPerfect: score.bonus_connections,
+          strandsSpanagram: score.bonus_strands
+        },
+        finalized: score.finalized
       };
 
-      scoresData?.forEach((score: ScoreRecord) => {
-        const playerName = score.players.name as PlayerName;
-        const playerKey = getPlayerKeyFromName(playerName);
-        
-        newScores[playerKey].dailyScores[score.date] = {
-          date: score.date,
-          wordle: score.wordle,
-          connections: score.connections,
-          strands: score.strands,
-          total: score.total,
-          bonusPoints: {
-            wordleQuick: score.bonus_wordle,
-            connectionsPerfect: score.bonus_connections,
-            strandsSpanagram: score.bonus_strands
-          },
-          finalized: score.finalized
-        };
+      newScores[playerKey].total += score.total;
+      if (score.bonus_wordle) newScores[playerKey].totalBonuses.wordle++;
+      if (score.bonus_connections) newScores[playerKey].totalBonuses.connections++;
+      if (score.bonus_strands) newScores[playerKey].totalBonuses.strands++;
+    });
 
-        newScores[playerKey].total += score.total;
-        if (score.bonus_wordle) newScores[playerKey].totalBonuses.wordle++;
-        if (score.bonus_connections) newScores[playerKey].totalBonuses.connections++;
-        if (score.bonus_strands) newScores[playerKey].totalBonuses.strands++;
-      });
-
-      setScores(newScores);
-    } catch (error) {
-      console.error('Error fetching scores:', error);
-    }
-  };
-
+    console.log('Processed scores:', newScores);
+    setScores(newScores);
+  } catch (error) {
+    console.error('Error fetching scores:', error);
+  }
+};
   const getPlayerKeyFromName = (name: PlayerName): PlayerKey => {
     switch (name) {
       case 'Keith': return 'player1';
