@@ -7,18 +7,20 @@ interface ScoreChartsProps {
 }
 
 const ScoreCharts: React.FC<ScoreChartsProps> = ({ scores }) => {
-  const allDates = Object.keys(scores.player1.dailyScores).sort();
-  console.log('Raw dates from database:', allDates);
-  console.log('Raw scores:', scores.player3.dailyScores);
+  const allDates = Object.keys(scores.player1.dailyScores).sort((a, b) => {
+    const dateA = new Date(a);
+    const dateB = new Date(b);
+    return dateA.getTime() - dateB.getTime();
+  });
 
+  // Create chart data with exact dates from database
   const chartData = allDates.map(date => {
     const dayData = {
-      date,
+      date,  // Keep original date string
       Keith: scores.player1.dailyScores[date]?.total || 0,
       Mike: scores.player2.dailyScores[date]?.total || 0,
       Colleen: scores.player3.dailyScores[date]?.total || 0
     };
-    console.log(`Data for ${date}:`, dayData);
     return dayData;
   });
 
@@ -26,17 +28,12 @@ const ScoreCharts: React.FC<ScoreChartsProps> = ({ scores }) => {
   let mikeTotal = 0;
   let colleenTotal = 0;
 
-  const cumulativeData = chartData.map(day => {
-    const result = {
-      date: day.date,
-      Keith: (keithTotal += day.Keith),
-      Mike: (mikeTotal += day.Mike),
-      Colleen: (colleenTotal += day.Colleen)
-    };
-    console.log(`Cumulative data for ${day.date}:`, result);
-    return result;
-  });
-  
+  const cumulativeData = chartData.map(day => ({
+    date: day.date,
+    Keith: (keithTotal += day.Keith),
+    Mike: (mikeTotal += day.Mike),
+    Colleen: (colleenTotal += day.Colleen)
+  }));  
   const gamePerformanceData = [
     {
       name: 'Keith',
