@@ -285,10 +285,10 @@ const calculateScores = (text: string): {
             name
           )
         `)
+        .gte('date', '2024-12-10')
         .order('date', { ascending: true });
 
       if (error) throw error;
-      console.log('Raw scores before processing:', scoresData);
 
       const newScores: PlayerScores = {
         player1: initialPlayerData(),
@@ -297,7 +297,6 @@ const calculateScores = (text: string): {
       };
 
       scoresData?.forEach((score: ScoreRecord) => {
-        console.log('Processing score record:', score);
         const playerName = score.players.name as PlayerName;
         const playerKey = getPlayerKeyFromName(playerName);
         
@@ -321,7 +320,6 @@ const calculateScores = (text: string): {
         if (score.bonus_strands) newScores[playerKey].totalBonuses.strands++;
       });
 
-      console.log('Processed scores:', newScores);
       setScores(newScores);
     } catch (error) {
       console.error('Error fetching scores:', error);
