@@ -277,6 +277,9 @@ const calculateScores = (text: string): {
 
   const fetchAllScores = async () => {
     try {
+      // Debug query
+      console.log('Fetching scores from:', CONTEST_START_DATE);
+      
       const { data: scoresData, error } = await publicSupabase
         .from('daily_scores')
         .select(`
@@ -284,12 +287,10 @@ const calculateScores = (text: string): {
           players (
             name
           )
-        `)
-        .gte('date', CONTEST_START_DATE)
-        .order('date', { ascending: true });
+        `);  // Removed date filter temporarily
 
       if (error) throw error;
-      console.log('Fetched scores from DB:', scoresData);
+      console.log('Raw DB data:', scoresData);
   
       const newScores: PlayerScores = {
         player1: initialPlayerData(),
