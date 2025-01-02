@@ -339,17 +339,13 @@ const calculateScores = (text: string): {
     
     const playerScores = [
       scores.player1.dailyScores[date],
-      scores.player2.dailyScores[date],
+      scores.player2.dailyScores[date], 
       scores.player3.dailyScores[date]
     ];
-  
-    const today = getCurrentDatePST();
-    const yesterday = new Date(new Date(today).setDate(new Date(today).getDate() - 1))
-      .toISOString().split('T')[0];
-    
-    return (date === today || date === yesterday) && 
-           (!playerScores.some(score => score?.finalized));
-  };
+   
+    // Only check if scores are finalized, remove date restrictions
+    return !playerScores.some(score => score?.finalized);
+   };
 
   const handleSubmit = async () => {
     if (!currentEntry || !inputText || !isAdmin) return;
