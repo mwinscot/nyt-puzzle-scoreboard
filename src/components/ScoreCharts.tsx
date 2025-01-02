@@ -9,12 +9,15 @@ interface ScoreChartsProps {
 const ScoreCharts: React.FC<ScoreChartsProps> = ({ scores }) => {
   const allDates = Object.keys(scores.player1.dailyScores).sort();
 
-  const chartData = allDates.map(date => ({
-    date,
-    Keith: scores.player1.dailyScores[date]?.total || 0,
-    Mike: scores.player2.dailyScores[date]?.total || 0,
-    Colleen: scores.player3.dailyScores[date]?.total || 0
-  }));
+  // Keep dates as strings, don't convert them
+  const chartData = allDates.map(date => {
+    return {
+      date: date,  // Use the date string directly
+      Keith: scores.player1.dailyScores[date]?.total || 0,
+      Mike: scores.player2.dailyScores[date]?.total || 0,
+      Colleen: scores.player3.dailyScores[date]?.total || 0
+    };
+  });
 
   let keithTotal = 0;
   let mikeTotal = 0;
