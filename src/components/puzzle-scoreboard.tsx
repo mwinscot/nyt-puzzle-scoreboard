@@ -366,8 +366,9 @@ const fetchAllScores = async () => {
       
       const playerName = currentEntry === 'player1' ? 'Keith' : 
                         currentEntry === 'player2' ? 'Mike' : 
-                        currentEntry === 'player3' ? 'Colleen':
-                        currentEntry === 'player4' ? 'Toby' : '';
+                        currentEntry === 'player3' ? 'Colleen' :
+                        currentEntry === 'player4' ? 'Toby' :
+                        '';
  
       const { data: player, error: playerError } = await supabase
         .from('players')
