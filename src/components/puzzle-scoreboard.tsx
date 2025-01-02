@@ -327,6 +327,7 @@ const calculateScores = (text: string): {
       console.error('Error fetching scores:', error);
     }
   };
+  
   const getPlayerKeyFromName = (name: PlayerName): PlayerKey => {
     switch (name) {
       case 'Keith': return 'player1';
