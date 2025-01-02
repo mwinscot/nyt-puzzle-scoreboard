@@ -19,7 +19,7 @@ const ScoreCharts: React.FC<ScoreChartsProps> = ({ scores }) => {
       Mike: scores.player2.dailyScores[date]?.total || 0,
       Colleen: scores.player3.dailyScores[date]?.total || 0
     };
-  }).sort((a, b) => a.date.localeCompare(b.date));
+  }).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
   let keithTotal = 0;
   let mikeTotal = 0;
@@ -56,7 +56,7 @@ const ScoreCharts: React.FC<ScoreChartsProps> = ({ scores }) => {
 
   return (
     <div className="space-y-8 mt-8">
-      <div className="h-96 w-full">
+      <div className="h-96 w-full mb-16">
         <h2 className="text-xl font-bold mb-4">Total Score Progress</h2>
         <ResponsiveContainer>
           <LineChart data={cumulativeData}>
