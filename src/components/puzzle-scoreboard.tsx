@@ -10,11 +10,24 @@ import { TotalScoreHeader } from '@/components/TotalScoreHeader';
 
 
 const getCurrentDatePST = (): string => {
- const pstNow = new Date().toLocaleString("en-US", {
-   timeZone: "America/Los_Angeles",
-   hour12: false,
- });
- return new Date(pstNow).toISOString().split('T')[0];
+  const date = new Date();
+  const pstDate = new Date(date.toLocaleString('en-US', {
+    timeZone: 'America/Los_Angeles'
+  }));
+  return pstDate.getFullYear() + '-' + 
+    String(pstDate.getMonth() + 1).padStart(2, '0') + '-' + 
+    String(pstDate.getDate()).padStart(2, '0');
+};
+
+// Helper to convert any date to PST
+const convertToPST = (date: string): string => {
+  const inputDate = new Date(date);
+  const pstDate = new Date(inputDate.toLocaleString('en-US', {
+    timeZone: 'America/Los_Angeles'
+  }));
+  return pstDate.getFullYear() + '-' + 
+    String(pstDate.getMonth() + 1).padStart(2, '0') + '-' + 
+    String(pstDate.getDate()).padStart(2, '0');
 };
 
 
@@ -273,21 +286,24 @@ const calculateScores = (text: string): {
           )
         `)
         .gte('date', CONTEST_START_DATE);
-
+  
       if (error) throw error;
-
+  
       const newScores: PlayerScores = {
         player1: initialPlayerData(),
         player2: initialPlayerData(),
         player3: initialPlayerData()
       };
-
+  
       scoresData?.forEach((score: ScoreRecord) => {
         const playerName = score.players.name as PlayerName;
         const playerKey = getPlayerKeyFromName(playerName);
         
-        newScores[playerKey].dailyScores[score.date] = {
-          date: score.date,
+        // Convert the date to PST before using it as a key
+        const pstDate = convertToPST(score.date);
+        
+        newScores[playerKey].dailyScores[pstDate] = {
+          date: pstDate,
           wordle: score.wordle,
           connections: score.connections,
           strands: score.strands,
@@ -299,13 +315,13 @@ const calculateScores = (text: string): {
           },
           finalized: score.finalized
         };
-
+  
         newScores[playerKey].total += score.total;
         if (score.bonus_wordle) newScores[playerKey].totalBonuses.wordle++;
         if (score.bonus_connections) newScores[playerKey].totalBonuses.connections++;
         if (score.bonus_strands) newScores[playerKey].totalBonuses.strands++;
       });
-
+  
       setScores(newScores);
     } catch (error) {
       console.error('Error fetching scores:', error);

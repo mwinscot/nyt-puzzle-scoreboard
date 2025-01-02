@@ -1,17 +1,20 @@
-export const getMonthDateRange = (month?: string) => {
-  const now = new Date();
-  const pstDate = new Date(now.toLocaleString('en-US', { timeZone: 'America/Los_Angeles' }));
-  
-  let firstDay;
-  if (month === '2023-12') {
-    firstDay = new Date('2023-12-10'); // December starts from 10th
-  } else {
-    firstDay = new Date(pstDate.getFullYear(), pstDate.getMonth(), 1);
-  }
-  
-  const lastDay = new Date(firstDay.getFullYear(), firstDay.getMonth() + 1, 0);
-  return {
-    start: firstDay.toISOString().split('T')[0],
-    end: lastDay.toISOString().split('T')[0]
-  };
+// src/utils/dateUtils.ts
+export const getCurrentDatePST = (): string => {
+  const date = new Date();
+  const pstDate = new Date(date.toLocaleString('en-US', {
+    timeZone: 'America/Los_Angeles'
+  }));
+  return pstDate.getFullYear() + '-' + 
+    String(pstDate.getMonth() + 1).padStart(2, '0') + '-' + 
+    String(pstDate.getDate()).padStart(2, '0');
+};
+
+export const convertToPST = (date: string): string => {
+  const inputDate = new Date(date);
+  const pstDate = new Date(inputDate.toLocaleString('en-US', {
+    timeZone: 'America/Los_Angeles'
+  }));
+  return pstDate.getFullYear() + '-' + 
+    String(pstDate.getMonth() + 1).padStart(2, '0') + '-' + 
+    String(pstDate.getDate()).padStart(2, '0');
 };
