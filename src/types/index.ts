@@ -30,7 +30,8 @@ export interface BonusPoints {
     player1: PlayerData;
     player2: PlayerData;
     player3: PlayerData;
+    player4: PlayerData;
   }
   
-  export type PlayerKey = 'player1' | 'player2' | 'player3';
-  export type PlayerName = 'Keith' | 'Mike' | 'Colleen';
+  export type PlayerKey = 'player1' | 'player2' | 'player3' | 'player4';
+  export type PlayerName = 'Keith' | 'Mike' | 'Colleen' | 'Toby';

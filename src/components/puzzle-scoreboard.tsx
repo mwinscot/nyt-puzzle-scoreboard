@@ -73,6 +73,7 @@ const getPlayerKeyFromName = (name: PlayerName): PlayerKey => {
    case 'Keith': return 'player1';
    case 'Mike': return 'player2';
    case 'Colleen': return 'player3';
+   case 'Toby': return 'player4';
    default: throw new Error('Invalid player name');
  }
 };
@@ -82,13 +83,15 @@ const PuzzleScoreboard: React.FC = () => {
   const [player1Name, setPlayer1Name] = useState<string>('Keith');
   const [player2Name, setPlayer2Name] = useState<string>('Mike');
   const [player3Name, setPlayer3Name] = useState<string>('Colleen');
+  const [player4Name, setPlayer4Name] = useState<string>('Toby');
   const [inputText, setInputText] = useState<string>('');
   const [currentEntry, setCurrentEntry] = useState<PlayerKey | null>(null);
   const [currentDate, setCurrentDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [scores, setScores] = useState<PlayerScores>({
     player1: initialPlayerData(),
     player2: initialPlayerData(),
-    player3: initialPlayerData()
+    player3: initialPlayerData(),
+    player4: initialPlayerData()
   });
 
   useEffect(() => {
@@ -293,7 +296,8 @@ const calculateScores = (text: string): {
       const newScores: PlayerScores = {
         player1: initialPlayerData(),
         player2: initialPlayerData(),
-        player3: initialPlayerData()
+        player3: initialPlayerData(),
+        player4: initialPlayerData()
       };
 
       scoresData?.forEach((score: ScoreRecord) => {
@@ -331,6 +335,7 @@ const calculateScores = (text: string): {
       case 'Keith': return 'player1';
       case 'Mike': return 'player2';
       case 'Colleen': return 'player3';
+      case 'Toby': return 'player4';
     }
   };
 
