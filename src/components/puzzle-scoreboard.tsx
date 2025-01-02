@@ -560,8 +560,8 @@ const fetchAllScores = async () => {
           </>
         )}
 
-        {/* Daily Scores Grid */}
-        <div className="grid grid-cols-3 gap-8 mb-8">
+{/* Daily Scores Grid - Adjusted spacing for 4 players */}
+<div className="grid grid-cols-4 gap-4 mb-8">
           {/* Player 1 Scores */}
           <div className="space-y-4">
             <h3 className="text-xl font-bold">Keith</h3>
@@ -583,11 +583,11 @@ const fetchAllScores = async () => {
               icon={Brain}
               bonusCount={scores.player1.dailyScores[currentDate]?.bonusPoints.strandsSpanagram ? 1 : 0}
             />
-            <div className="text-sm text-gray-600">
+            <div className="text-xs text-gray-600">
               Total Bonus Points: 
-              <span className="ml-2">Wordle ({scores.player1.totalBonuses.wordle})</span>
-              <span className="ml-2">Connections ({scores.player1.totalBonuses.connections})</span>
-              <span className="ml-2">Strands ({scores.player1.totalBonuses.strands})</span>
+              <span className="ml-1">W({scores.player1.totalBonuses.wordle})</span>
+              <span className="ml-1">C({scores.player1.totalBonuses.connections})</span>
+              <span className="ml-1">S({scores.player1.totalBonuses.strands})</span>
             </div>
           </div>
 
@@ -612,11 +612,11 @@ const fetchAllScores = async () => {
               icon={Brain}
               bonusCount={scores.player2.dailyScores[currentDate]?.bonusPoints.strandsSpanagram ? 1 : 0}
             />
-            <div className="text-sm text-gray-600">
+            <div className="text-xs text-gray-600">
               Total Bonus Points: 
-              <span className="ml-2">Wordle ({scores.player2.totalBonuses.wordle})</span>
-              <span className="ml-2">Connections ({scores.player2.totalBonuses.connections})</span>
-              <span className="ml-2">Strands ({scores.player2.totalBonuses.strands})</span>
+              <span className="ml-1">W({scores.player2.totalBonuses.wordle})</span>
+              <span className="ml-1">C({scores.player2.totalBonuses.connections})</span>
+              <span className="ml-1">S({scores.player2.totalBonuses.strands})</span>
             </div>
           </div>
 
@@ -641,12 +641,14 @@ const fetchAllScores = async () => {
               icon={Brain}
               bonusCount={scores.player3.dailyScores[currentDate]?.bonusPoints.strandsSpanagram ? 1 : 0}
             />
-            <div className="text-sm text-gray-600">
+            <div className="text-xs text-gray-600">
               Total Bonus Points: 
-              <span className="ml-2">Wordle ({scores.player3.totalBonuses.wordle})</span>
-              <span className="ml-2">Connections ({scores.player3.totalBonuses.connections})</span>
-              <span className="ml-2">Strands ({scores.player3.totalBonuses.strands})</span>
+              <span className="ml-1">W({scores.player3.totalBonuses.wordle})</span>
+              <span className="ml-1">C({scores.player3.totalBonuses.connections})</span>
+              <span className="ml-1">S({scores.player3.totalBonuses.strands})</span>
             </div>
+          </div>
+
           {/* Player 4 Scores */}
           <div className="space-y-4">
             <h3 className="text-xl font-bold">Toby</h3>
@@ -668,14 +670,13 @@ const fetchAllScores = async () => {
               icon={Brain}
               bonusCount={scores.player4.dailyScores[currentDate]?.bonusPoints.strandsSpanagram ? 1 : 0}
             />
-            <div className="text-sm text-gray-600">
+            <div className="text-xs text-gray-600">
               Total Bonus Points: 
-              <span className="ml-2">Wordle ({scores.player4.totalBonuses.wordle})</span>
-              <span className="ml-2">Connections ({scores.player4.totalBonuses.connections})</span>
-              <span className="ml-2">Strands ({scores.player4.totalBonuses.strands})</span>
+              <span className="ml-1">W({scores.player4.totalBonuses.wordle})</span>
+              <span className="ml-1">C({scores.player4.totalBonuses.connections})</span>
+              <span className="ml-1">S({scores.player4.totalBonuses.strands})</span>
             </div>
           </div>
-        </div>
         </div>
 
         {/* Score History Chart */}
@@ -686,7 +687,7 @@ const fetchAllScores = async () => {
             View December 2024 Contest Results →
           </Link>
         </div>
-        
+
         {/* Rules Section */}
         <Card className="mt-8 bg-gray-50">
           <CardHeader>
