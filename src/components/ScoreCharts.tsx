@@ -8,28 +8,35 @@ interface ScoreChartsProps {
 
 const ScoreCharts: React.FC<ScoreChartsProps> = ({ scores }) => {
   const allDates = Object.keys(scores.player1.dailyScores).sort();
+  console.log('Raw dates from database:', allDates);
+  console.log('Raw scores:', scores.player3.dailyScores);
 
-  // Keep dates as strings, don't convert them
   const chartData = allDates.map(date => {
-    return {
-      date: date,  // Use the date string directly
+    const dayData = {
+      date,
       Keith: scores.player1.dailyScores[date]?.total || 0,
       Mike: scores.player2.dailyScores[date]?.total || 0,
       Colleen: scores.player3.dailyScores[date]?.total || 0
     };
+    console.log(`Data for ${date}:`, dayData);
+    return dayData;
   });
 
   let keithTotal = 0;
   let mikeTotal = 0;
   let colleenTotal = 0;
 
-  const cumulativeData = chartData.map(day => ({
-    date: day.date,
-    Keith: (keithTotal += day.Keith),
-    Mike: (mikeTotal += day.Mike),
-    Colleen: (colleenTotal += day.Colleen)
-  }));
-
+  const cumulativeData = chartData.map(day => {
+    const result = {
+      date: day.date,
+      Keith: (keithTotal += day.Keith),
+      Mike: (mikeTotal += day.Mike),
+      Colleen: (colleenTotal += day.Colleen)
+    };
+    console.log(`Cumulative data for ${day.date}:`, result);
+    return result;
+  });
+  
   const gamePerformanceData = [
     {
       name: 'Keith',
