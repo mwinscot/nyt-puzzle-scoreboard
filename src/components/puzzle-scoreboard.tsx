@@ -619,16 +619,6 @@ const calculateScores = (text: string): {
           </div>
         </div>
 
-{/* Total Score Header */}
-<TotalScoreHeader
-          player1Score={Object.values(scores.player1.dailyScores).reduce((acc, score) => acc + score.total, 0)}
-          player2Score={Object.values(scores.player2.dailyScores).reduce((acc, score) => acc + score.total, 0)}
-          player3Score={Object.values(scores.player3.dailyScores).reduce((acc, score) => acc + score.total, 0)}
-          player1Name={player1Name}
-          player2Name={player2Name}
-          player3Name={player3Name}
-        />
-
         {/* Score History Chart */}
         <ScoreCharts scores={scores} />
 
