@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useEffect, useState } from 'react';
 import { publicSupabase } from '@/lib/supabase';
 import ScoreCharts from '@/components/ScoreCharts';
@@ -21,7 +23,7 @@ interface ScoreRecord {
   };
 }
 
-const DecemberScoreboard = () => {
+export default function DecemberScoreboard() {
   const initialPlayerData = (): PlayerData => ({
     dailyScores: {},
     total: 0,
@@ -32,7 +34,6 @@ const DecemberScoreboard = () => {
     }
   });
 
-  // Include player4 in the initial state but it won't be used for December
   const [scores, setScores] = useState<PlayerScores>({
     player1: initialPlayerData(),
     player2: initialPlayerData(),
@@ -146,6 +147,4 @@ const DecemberScoreboard = () => {
       </div>
     </div>
   );
-};
-
-export default DecemberScoreboard;
+}
