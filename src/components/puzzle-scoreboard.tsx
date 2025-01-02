@@ -285,9 +285,11 @@ const calculateScores = (text: string): {
             name
           )
         `)
-        .gte('date', CONTEST_START_DATE);
-  
+        .gte('date', CONTEST_START_DATE)
+        .order('date', { ascending: true });
+
       if (error) throw error;
+      console.log('Fetched scores from DB:', scoresData);
   
       const newScores: PlayerScores = {
         player1: initialPlayerData(),
