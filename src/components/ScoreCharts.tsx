@@ -1,45 +1,32 @@
 import React from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import { PlayerScores } from '@/types';
-import { convertToPST } from '@/utils/dateUtils';
 
 interface ScoreChartsProps {
   scores: PlayerScores;
 }
 
 const ScoreCharts: React.FC<ScoreChartsProps> = ({ scores }) => {
-  const allDates = Object.keys(scores.player1.dailyScores);
+  const allDates = Object.keys(scores.player1.dailyScores).sort();
 
-  const chartData = allDates.map(date => {
-    return {
-      date,
-      Keith: scores.player1.dailyScores[date]?.total || 0,
-      Mike: scores.player2.dailyScores[date]?.total || 0,
-      Colleen: scores.player3.dailyScores[date]?.total || 0,
-      // Add original scores for debugging
-      originalDate: date,
-      originalKeith: scores.player1.dailyScores[date]?.total || 0
-    };
-  }).sort((a, b) => a.date.localeCompare(b.date));
-
-  console.log('Chart data after sorting:', chartData);
+  const chartData = allDates.map(date => ({
+    date,
+    Keith: scores.player1.dailyScores[date]?.total || 0,
+    Mike: scores.player2.dailyScores[date]?.total || 0,
+    Colleen: scores.player3.dailyScores[date]?.total || 0
+  }));
 
   let keithTotal = 0;
   let mikeTotal = 0;
   let colleenTotal = 0;
 
-  const cumulativeData = chartData.map(day => {
-    const result = {
-      date: day.date,
-      Keith: (keithTotal += day.Keith),
-      Mike: (mikeTotal += day.Mike),
-      Colleen: (colleenTotal += day.Colleen)
-    };
-    console.log(`Cumulative for ${day.date}: Keith=${result.Keith}`);
-    return result;
-  });
+  const cumulativeData = chartData.map(day => ({
+    date: day.date,
+    Keith: (keithTotal += day.Keith),
+    Mike: (mikeTotal += day.Mike),
+    Colleen: (colleenTotal += day.Colleen)
+  }));
 
-  // Game performance data calculation
   const gamePerformanceData = [
     {
       name: 'Keith',
