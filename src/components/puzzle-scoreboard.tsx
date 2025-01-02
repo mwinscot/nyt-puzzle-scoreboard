@@ -95,6 +95,8 @@ const PuzzleScoreboard: React.FC = () => {
     player4: initialPlayerData()
   });
 
+const CONTEST_START_DATE = '2024-01-01'; // New contest start date
+
   useEffect(() => {
     // Check if user is already authenticated
     const checkAuth = async () => {
@@ -277,8 +279,6 @@ const calculateScores = (text: string): {
   return { score: totalScore, bonusPoints, gameScores };
 };
 
-  const CONTEST_START_DATE = '2024-12-10'; // Today's date
-
   const fetchAllScores = async () => {
     try {
       const { data: scoresData, error } = await publicSupabase
@@ -337,6 +337,7 @@ const calculateScores = (text: string): {
       case 'Mike': return 'player2';
       case 'Colleen': return 'player3';
       case 'Toby': return 'player4';
+      default: throw new Error('Invalid player name');
     }
   };
 
@@ -425,12 +426,14 @@ const calculateScores = (text: string): {
           </Link>
         </div>
         <TotalScoreHeader
-          player1Score={Object.values(scores.player1.dailyScores).reduce((acc, score) => acc + score.total, 0)}
-          player2Score={Object.values(scores.player2.dailyScores).reduce((acc, score) => acc + score.total, 0)}
-          player3Score={Object.values(scores.player3.dailyScores).reduce((acc, score) => acc + score.total, 0)}
+          player1Score={scores.player1.total}
+          player2Score={scores.player2.total}
+          player3Score={scores.player3.total}
+          player4Score={scores.player4.total}
           player1Name={player1Name}
           player2Name={player2Name}
           player3Name={player3Name}
+          player4Name={player4Name}
         />
 
         {/* Add Date Selection */}
@@ -489,6 +492,19 @@ const calculateScores = (text: string): {
                 }`}
               >
                 Colleen's Entry
+              </button>
+              <button
+                onClick={() => setCurrentEntry('player4')}
+                disabled={!canEditDate(currentDate, scores)}
+                className={`p-2 rounded-md flex-1 ${
+                  currentEntry === 'player4'
+                    ? 'bg-blue-500 text-white'
+                    : canEditDate(currentDate, scores)
+                    ? 'bg-gray-200 hover:bg-gray-300'
+                    : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                }`}
+              >
+                Toby's Entry
               </button>
             </div>
 
@@ -632,7 +648,35 @@ const calculateScores = (text: string): {
               <span className="ml-2">Connections ({scores.player3.totalBonuses.connections})</span>
               <span className="ml-2">Strands ({scores.player3.totalBonuses.strands})</span>
             </div>
+          {/* Player 4 Scores */}
+          <div className="space-y-4">
+            <h3 className="text-xl font-bold">Toby</h3>
+            <ScoreCard 
+              title="Wordle Wins" 
+              score={scores.player4.dailyScores[currentDate]?.wordle || 0} 
+              icon={Target}
+              bonusCount={scores.player4.dailyScores[currentDate]?.bonusPoints.wordleQuick ? 1 : 0}
+            />
+            <ScoreCard 
+              title="Connections Wins" 
+              score={scores.player4.dailyScores[currentDate]?.connections || 0} 
+              icon={Puzzle}
+              bonusCount={scores.player4.dailyScores[currentDate]?.bonusPoints.connectionsPerfect ? 1 : 0}
+            />
+            <ScoreCard 
+              title="Strands Wins" 
+              score={scores.player4.dailyScores[currentDate]?.strands || 0} 
+              icon={Brain}
+              bonusCount={scores.player4.dailyScores[currentDate]?.bonusPoints.strandsSpanagram ? 1 : 0}
+            />
+            <div className="text-sm text-gray-600">
+              Total Bonus Points: 
+              <span className="ml-2">Wordle ({scores.player4.totalBonuses.wordle})</span>
+              <span className="ml-2">Connections ({scores.player4.totalBonuses.connections})</span>
+              <span className="ml-2">Strands ({scores.player4.totalBonuses.strands})</span>
+            </div>
           </div>
+        </div>
         </div>
 
         {/* Score History Chart */}
