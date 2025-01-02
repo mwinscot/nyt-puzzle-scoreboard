@@ -1,14 +1,30 @@
 import React, { useEffect, useState } from 'react';
 import { publicSupabase } from '@/lib/supabase';
-import { ScoreCharts } from '@/components/ScoreCharts';
+import ScoreCharts from '@/components/ScoreCharts';
 import { TotalScoreHeader } from '@/components/TotalScoreHeader';
-import { PlayerScores, ScoreRecord, PlayerName } from '@/types';
+import { PlayerScores, PlayerName } from '@/types';
+
+type ScoreRecord = {
+  date: string;
+  wordle: number;
+  connections: number;
+  strands: number;
+  total: number;
+  bonus_wordle: boolean;
+  bonus_connections: boolean;
+  bonus_strands: boolean;
+  finalized: boolean;
+  players: {
+    name: PlayerName;
+  };
+};
 
 const DecemberScoreboard = () => {
   const [scores, setScores] = useState<PlayerScores>({
     player1: { dailyScores: {}, total: 0, totalBonuses: { wordle: 0, connections: 0, strands: 0 } },
     player2: { dailyScores: {}, total: 0, totalBonuses: { wordle: 0, connections: 0, strands: 0 } },
-    player3: { dailyScores: {}, total: 0, totalBonuses: { wordle: 0, connections: 0, strands: 0 } }
+    player3: { dailyScores: {}, total: 0, totalBonuses: { wordle: 0, connections: 0, strands: 0 } },
+    player4: { dailyScores: {}, total: 0, totalBonuses: { wordle: 0, connections: 0, strands: 0 } }
   });
 
   useEffect(() => {
@@ -30,10 +46,11 @@ const DecemberScoreboard = () => {
         return;
       }
 
-      const newScores = {
+      const newScores: PlayerScores = {
         player1: { dailyScores: {}, total: 0, totalBonuses: { wordle: 0, connections: 0, strands: 0 } },
         player2: { dailyScores: {}, total: 0, totalBonuses: { wordle: 0, connections: 0, strands: 0 } },
-        player3: { dailyScores: {}, total: 0, totalBonuses: { wordle: 0, connections: 0, strands: 0 } }
+        player3: { dailyScores: {}, total: 0, totalBonuses: { wordle: 0, connections: 0, strands: 0 } },
+        player4: { dailyScores: {}, total: 0, totalBonuses: { wordle: 0, connections: 0, strands: 0 } }
       };
 
       scoresData?.forEach((score: ScoreRecord) => {
