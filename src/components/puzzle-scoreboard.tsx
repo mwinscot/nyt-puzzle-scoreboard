@@ -5,7 +5,7 @@ import { supabase, publicSupabase } from '@/lib/supabase';
 import { PlayerScores, PlayerData, PlayerKey, PlayerName, ScoreRecord } from '@/types';
 import { AdminAuth } from './AdminAuth';
 import ScoreCharts from '@/components/ScoreCharts';
-import { Card } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScoreCard } from './ScoreCard';
 import { ArchiveButton } from './ArchiveButton';
 import { TotalScoreHeader } from '@/components/TotalScoreHeader';
@@ -483,6 +483,47 @@ const PuzzleScoreboard: React.FC = () => {
         <div className="mt-6">
           <ScoreCharts scores={scores} />
         </div>
+
+        {/* Rules Section */}
+        <Card className="mt-8 bg-gray-50">
+          <CardHeader>
+            <CardTitle className="text-xl font-semibold text-gray-900">Game Rules & Scoring</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Wordle Rules */}
+            <div>
+              <h3 className="text-lg font-semibold mb-2 text-gray-900">Wordle</h3>
+              <ul className="list-disc pl-6 space-y-1 text-gray-800">
+                <li>1 point for completing the puzzle</li>
+                <li>1 bonus point if finished within 3 lines or less</li>
+              </ul>
+            </div>
+
+            <div className="my-4 border-t border-gray-200" />
+
+            {/* Connections Rules */}
+            <div>
+              <h3 className="text-lg font-semibold mb-2 text-gray-900">Connections</h3>
+              <ul className="list-disc pl-6 space-y-1 text-gray-800">
+                <li>1 point for completing the puzzle with errors</li>
+                <li>2 points for completing the puzzle with no errors</li>
+                <li>3 points if you get purple first and complete with no errors</li>
+                <li>2 points if you get purple first but have errors</li>
+              </ul>
+            </div>
+
+            <div className="my-4 border-t border-gray-200" />
+
+            {/* Strands Rules */}
+            <div>
+              <h3 className="text-lg font-semibold mb-2 text-gray-900">Strands</h3>
+              <ul className="list-disc pl-6 space-y-1 text-gray-800">
+                <li>1 point for completing the puzzle with no hints</li>
+                <li>1 bonus point if spanagram found within first three moves</li>
+              </ul>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
