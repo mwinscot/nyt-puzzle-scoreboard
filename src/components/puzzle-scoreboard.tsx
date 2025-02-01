@@ -8,6 +8,7 @@ import ScoreCharts from '@/components/ScoreCharts';
 import { Card } from '@/components/ui/card';
 import { ScoreCard } from './ScoreCard';
 import { ArchiveButton } from './ArchiveButton';
+import { TotalScoreHeader } from '@/components/TotalScoreHeader';
 
 // Helper function to get current date in PST
 const getCurrentDatePST = (): string => {
@@ -337,9 +338,34 @@ const PuzzleScoreboard: React.FC = () => {
           </div>
         )}
 
+        {/* Header Scoreboard */}
+        <div className="mb-8">
+          <TotalScoreHeader
+            player1Score={scores.player1.total}
+            player2Score={scores.player2.total}
+            player3Score={scores.player3.total}
+            player4Score={scores.player4.total}
+            player1Name={player1Name}
+            player2Name={player2Name}
+            player3Name={player3Name}
+            player4Name={player4Name}
+          />
+        </div>
+
         {/* Score Input Section */}
         {isAdmin && (
           <div className="mb-6">
+            {/* Date Picker */}
+            <div className="mb-4">
+              <input
+                type="date"
+                value={currentDate}
+                onChange={(e) => setCurrentDate(e.target.value)}
+                className="p-2 border rounded"
+                max={getCurrentDatePST()}
+              />
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <button
                 onClick={() => setCurrentEntry('player1')}
