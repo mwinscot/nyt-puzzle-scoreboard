@@ -1,10 +1,10 @@
 // src/components/ArchivedMonthView.tsx
 import React, { useEffect, useState } from 'react';
-import { PlayerScores, ArchivedScores } from '@/types';
-import { publicSupabase } from '@/lib/supabase';
+import { PlayerScores } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import ScoreCharts from '@/components/ScoreCharts';
 import { TotalScoreHeader } from '@/components/TotalScoreHeader';
+import { publicSupabase } from '@/lib/supabase';
 
 interface ArchivedMonthViewProps {
   month: string;  // Format: "YYYY-MM"
@@ -81,38 +81,12 @@ export const ArchivedMonthView: React.FC<ArchivedMonthViewProps> = ({ month }) =
             player1Score={archivedScores.player1.total}
             player2Score={archivedScores.player2.total}
             player3Score={archivedScores.player3.total}
+            player4Score={archivedScores.player4.total}
             player1Name="Keith"
             player2Name="Mike"
             player3Name="Colleen"
+            player4Name="Player 4"
           />
-        </CardContent>
-      </Card>
-
-      <Card className="mb-6">
-        <CardContent className="p-6">
-          <div className="mb-4">
-            <h2 className="text-xl font-semibold mb-2">Bonus Points Totals</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <h3 className="font-medium">Keith</h3>
-                <p>Wordle: {archivedScores.player1.totalBonuses.wordle}</p>
-                <p>Connections: {archivedScores.player1.totalBonuses.connections}</p>
-                <p>Strands: {archivedScores.player1.totalBonuses.strands}</p>
-              </div>
-              <div>
-                <h3 className="font-medium">Mike</h3>
-                <p>Wordle: {archivedScores.player2.totalBonuses.wordle}</p>
-                <p>Connections: {archivedScores.player2.totalBonuses.connections}</p>
-                <p>Strands: {archivedScores.player2.totalBonuses.strands}</p>
-              </div>
-              <div>
-                <h3 className="font-medium">Colleen</h3>
-                <p>Wordle: {archivedScores.player3.totalBonuses.wordle}</p>
-                <p>Connections: {archivedScores.player3.totalBonuses.connections}</p>
-                <p>Strands: {archivedScores.player3.totalBonuses.strands}</p>
-              </div>
-            </div>
-          </div>
         </CardContent>
       </Card>
 
