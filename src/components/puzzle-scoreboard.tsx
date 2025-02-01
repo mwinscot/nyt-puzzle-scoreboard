@@ -34,6 +34,7 @@ const getPlayerKeyFromName = (name: PlayerName): PlayerKey => {
     case 'Keith': return 'player1';
     case 'Mike': return 'player2';
     case 'Colleen': return 'player3';
+    case 'Toby': return 'player4';
     default: throw new Error('Invalid player name');
   }
 };
@@ -44,6 +45,7 @@ const PuzzleScoreboard: React.FC = () => {
   const [player1Name] = useState<string>('Keith');
   const [player2Name] = useState<string>('Mike');
   const [player3Name] = useState<string>('Colleen');
+  const [player4Name] = useState<string>('Toby');
   const [inputText, setInputText] = useState<string>('');
   const [currentEntry, setCurrentEntry] = useState<PlayerKey | null>(null);
   const [currentDate, setCurrentDate] = useState<string>(getCurrentDatePST());
@@ -125,7 +127,8 @@ const PuzzleScoreboard: React.FC = () => {
       const { score, bonusPoints, gameScores } = calculateScores(inputText);
       
       const playerName = currentEntry === 'player1' ? 'Keith' : 
-                        currentEntry === 'player2' ? 'Mike' : 'Colleen';
+                      currentEntry === 'player2' ? 'Mike' : 
+                      currentEntry === 'player3' ? 'Colleen' : 'Toby';
 
       const { data: player, error: playerError } = await supabase
         .from('players')
@@ -218,7 +221,7 @@ const PuzzleScoreboard: React.FC = () => {
         {/* Score Input Section */}
         {isAdmin && (
           <div className="mb-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <button
                 onClick={() => setCurrentEntry('player1')}
                 className={`p-2 rounded ${
@@ -243,6 +246,14 @@ const PuzzleScoreboard: React.FC = () => {
               >
                 {player3Name}
               </button>
+              <button
+                onClick={() => setCurrentEntry('player4')}
+                className={`p-2 rounded ${
+                  currentEntry === 'player4' ? 'bg-blue-500 text-white' : 'bg-gray-200'
+                }`}
+              >
+                {player4Name}
+              </button>
             </div>
             {currentEntry && (
               <div className="mt-4">
@@ -265,7 +276,7 @@ const PuzzleScoreboard: React.FC = () => {
         )}
 
         {/* Scoreboard */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
           <ScoreCard 
             title="Total Score"
             score={scores.player1.total}
@@ -298,6 +309,17 @@ const PuzzleScoreboard: React.FC = () => {
               scores.player3.totalBonuses.strands
             }
             playerName={player3Name}
+          />
+          <ScoreCard 
+            title="Total Score"
+            score={scores.player4.total}
+            icon={Trophy}
+            bonusCount={
+              scores.player4.totalBonuses.wordle + 
+              scores.player4.totalBonuses.connections + 
+              scores.player4.totalBonuses.strands
+            }
+            playerName={player4Name}
           />
         </div>
 

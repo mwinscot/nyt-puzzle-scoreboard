@@ -1,6 +1,8 @@
 // src/components/ArchiveButton.tsx
+
 import React, { useState } from 'react';
 import { supabase, publicSupabase } from '@/lib/supabase';
+import { PlayerScores, ScoreRecord } from '@/types';
 
 interface ArchiveButtonProps {
   onArchiveComplete?: () => void;
@@ -15,12 +17,8 @@ type PlayerTotals = {
   }
 };
 
-interface ScoreRecord {
-  player_id: 1 | 2 | 3;  // Restrict to valid player IDs
-  total: number;
-  bonus_wordle: boolean;
-  bonus_connections: boolean;
-  bonus_strands: boolean;
+interface ArchiveScoreRecord extends ScoreRecord {
+  player_id: 1 | 2 | 3 | 4;
 }
 
 export const ArchiveButton: React.FC<ArchiveButtonProps> = ({ onArchiveComplete }) => {
@@ -54,7 +52,8 @@ export const ArchiveButton: React.FC<ArchiveButtonProps> = ({ onArchiveComplete 
           )
         `)
         .gte('date', startDate)
-        .lte('date', endDate);
+        .lte('date', endDate)
+        .eq('archived', false);
 
       if (fetchError) throw fetchError;
 
@@ -62,11 +61,11 @@ export const ArchiveButton: React.FC<ArchiveButtonProps> = ({ onArchiveComplete 
       const totals: PlayerTotals = {
         1: { score: 0, wordle: 0, connections: 0, strands: 0 },
         2: { score: 0, wordle: 0, connections: 0, strands: 0 },
-        3: { score: 0, wordle: 0, connections: 0, strands: 0 }
+        3: { score: 0, wordle: 0, connections: 0, strands: 0 },
+        4: { score: 0, wordle: 0, connections: 0, strands: 0 }
       };
 
-      monthlyScores?.forEach((score: ScoreRecord) => {
-        // TypeScript now knows score.player_id is 1, 2, or 3
+      monthlyScores?.forEach((score: ArchiveScoreRecord) => {
         const player = totals[score.player_id];
         player.score += score.total;
         if (score.bonus_wordle) player.wordle++;
@@ -77,15 +76,11 @@ export const ArchiveButton: React.FC<ArchiveButtonProps> = ({ onArchiveComplete 
       // 3. Store in monthly_archives table
       const { error: archiveError } = await supabase
         .from('monthly_archives')
-        .upsert(Object.entries(totals).map(([player_id, stats]) => ({
+        .upsert({
           month: month,
-          player_id: parseInt(player_id),
-          total_score: stats.score,
-          total_wordle_bonus: stats.wordle,
-          total_connections_bonus: stats.connections,
-          total_strands_bonus: stats.strands,
+          archive_data: totals,
           created_at: new Date().toISOString()
-        })));
+        });
 
       if (archiveError) throw archiveError;
 
