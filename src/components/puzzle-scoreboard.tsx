@@ -330,7 +330,7 @@ const PuzzleScoreboard: React.FC = () => {
           <div className="mb-4 flex justify-between items-center">
             <ArchiveButton onArchiveComplete={handleArchiveComplete} />
             <Link 
-              href={`/archives/${new Date().toISOString().slice(0, 7)}`}
+              href={`/archives/${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`}
               className="text-blue-500 hover:text-blue-600 flex items-center gap-2"
             >
               View Previous Month
