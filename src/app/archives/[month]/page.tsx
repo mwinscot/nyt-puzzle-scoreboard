@@ -3,6 +3,7 @@ import ScoreCharts from '@/components/ScoreCharts';
 import { publicSupabase } from '@/lib/supabase';
 import { PlayerScores, PlayerData, PlayerName } from '@/types';
 import Link from 'next/link';
+import { notFound } from 'next/navigation';
 
 const initialPlayerData = (): PlayerData => ({
   dailyScores: {},
@@ -20,18 +21,25 @@ function getPlayerKeyFromName(name: PlayerName): keyof PlayerScores {
   }
 }
 
-export default async function ArchivePage({
-  params
-}: {
-  params: { month: string }
-}) {
-  const { month } = params;
-  const [yearStr, monthStr] = month.split('-');
+export const runtime = 'edge';
+
+export default async function Page({ params }: { params: { month: string } }) {
+  if (!params.month || !/^\d{4}-\d{2}$/.test(params.month)) {
+    notFound();
+  }
+
+  const [yearStr, monthStr] = params.month.split('-');
   const year = parseInt(yearStr);
   const monthNum = parseInt(monthStr);
+  
+  // Validate date
+  if (isNaN(year) || isNaN(monthNum) || monthNum < 1 || monthNum > 12) {
+    notFound();
+  }
+
   const lastDay = new Date(year, monthNum, 0).getDate();
-  const startDate = `${month}-01`;
-  const endDate = `${month}-${String(lastDay).padStart(2, '0')}`;
+  const startDate = `${params.month}-01`;
+  const endDate = `${params.month}-${String(lastDay).padStart(2, '0')}`;
 
   const { data: scoresData } = await publicSupabase
     .from('daily_scores')
@@ -69,7 +77,7 @@ export default async function ArchivePage({
     if (score.bonus_strands) scores[playerKey].totalBonuses.strands++;
   });
 
-  const monthDate = new Date(`${month}-01`);
+  const monthDate = new Date(`${params.month}-01`);
   const monthName = monthDate.toLocaleString('default', { month: 'long', year: 'numeric' });
 
   return (
