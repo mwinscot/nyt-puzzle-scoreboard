@@ -1,23 +1,12 @@
 import { TotalScoreHeader } from '@/components/TotalScoreHeader';
 import ScoreCharts from '@/components/ScoreCharts';
 import { publicSupabase } from '@/lib/supabase';
-import { PlayerScores, PlayerData, PlayerName, ScoreRecord } from '@/types';
+import { PlayerScores, PlayerData, PlayerName } from '@/types';
 import Link from 'next/link';
 
-const initialPlayerData = (): PlayerData => ({
-  dailyScores: {},
-  total: 0,
-  totalBonuses: { wordle: 0, connections: 0, strands: 0 }
-});
-
-export default async function ArchivePage({ params }: { params: { month: string } }) {
-  const { month } = params;
-  
-  // Fix parsing and date calculation
+async function getData(month: string) {
   const [yearStr, monthStr] = month.split('-');
-  const year = parseInt(yearStr);
-  const monthNum = parseInt(monthStr);
-  const lastDay = new Date(year, monthNum, 0).getDate();
+  const lastDay = new Date(parseInt(yearStr), parseInt(monthStr), 0).getDate();
   const startDate = `${month}-01`;
   const endDate = `${month}-${String(lastDay).padStart(2, '0')}`;
 
@@ -27,6 +16,32 @@ export default async function ArchivePage({ params }: { params: { month: string 
     .gte('date', startDate)
     .lte('date', endDate);
 
+  return scoresData || [];
+}
+
+function getPlayerKeyFromName(name: PlayerName): keyof PlayerScores {
+  switch (name) {
+    case 'Keith': return 'player1';
+    case 'Mike': return 'player2';
+    case 'Colleen': return 'player3';
+    case 'Toby': return 'player4';
+    default: throw new Error('Invalid player name');
+  }
+}
+
+const initialPlayerData = (): PlayerData => ({
+  dailyScores: {},
+  total: 0,
+  totalBonuses: { wordle: 0, connections: 0, strands: 0 }
+});
+
+export default async function ArchivePage({
+  params
+}: {
+  params: { month: string }
+}) {
+  const scoresData = await getData(params.month);
+  
   const scores: PlayerScores = {
     player1: initialPlayerData(),
     player2: initialPlayerData(),
@@ -34,12 +49,30 @@ export default async function ArchivePage({ params }: { params: { month: string 
     player4: initialPlayerData()
   };
 
-  scoresData?.forEach((score: ScoreRecord) => {
+  scoresData.forEach((score) => {
     const playerKey = getPlayerKeyFromName(score.players.name as PlayerName);
-    // ...existing score processing code...
+    
+    scores[playerKey].dailyScores[score.date] = {
+      date: score.date,
+      wordle: score.wordle,
+      connections: score.connections,
+      strands: score.strands,
+      total: score.total,
+      bonusPoints: {
+        wordleQuick: score.bonus_wordle,
+        connectionsPerfect: score.bonus_connections,
+        strandsSpanagram: score.bonus_strands
+      },
+      finalized: score.finalized
+    };
+
+    scores[playerKey].total += score.total;
+    if (score.bonus_wordle) scores[playerKey].totalBonuses.wordle++;
+    if (score.bonus_connections) scores[playerKey].totalBonuses.connections++;
+    if (score.bonus_strands) scores[playerKey].totalBonuses.strands++;
   });
 
-  const monthDate = new Date(`${month}-01`);
+  const monthDate = new Date(`${params.month}-01`);
   const monthName = monthDate.toLocaleString('default', { month: 'long', year: 'numeric' });
 
   return (
@@ -67,14 +100,4 @@ export default async function ArchivePage({ params }: { params: { month: string 
       </div>
     </div>
   );
-}
-
-function getPlayerKeyFromName(name: PlayerName) {
-  switch (name) {
-    case 'Keith': return 'player1';
-    case 'Mike': return 'player2';
-    case 'Colleen': return 'player3';
-    case 'Toby': return 'player4';
-    default: throw new Error('Invalid player name');
-  }
 }
