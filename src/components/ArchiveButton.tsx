@@ -6,6 +6,23 @@ interface ArchiveButtonProps {
   onArchiveComplete?: () => void;
 }
 
+type PlayerTotals = {
+  [key: number]: {
+    score: number;
+    wordle: number;
+    connections: number;
+    strands: number;
+  }
+};
+
+interface ScoreRecord {
+  player_id: 1 | 2 | 3;  // Restrict to valid player IDs
+  total: number;
+  bonus_wordle: boolean;
+  bonus_connections: boolean;
+  bonus_strands: boolean;
+}
+
 export const ArchiveButton: React.FC<ArchiveButtonProps> = ({ onArchiveComplete }) => {
   const [isArchiving, setIsArchiving] = useState(false);
 
@@ -42,20 +59,19 @@ export const ArchiveButton: React.FC<ArchiveButtonProps> = ({ onArchiveComplete 
       if (fetchError) throw fetchError;
 
       // 2. Calculate player totals
-      const totals = {
+      const totals: PlayerTotals = {
         1: { score: 0, wordle: 0, connections: 0, strands: 0 },
         2: { score: 0, wordle: 0, connections: 0, strands: 0 },
         3: { score: 0, wordle: 0, connections: 0, strands: 0 }
       };
 
-      monthlyScores?.forEach(score => {
-        if (score.player_id in totals) {
-          const player = totals[score.player_id];
-          player.score += score.total;
-          if (score.bonus_wordle) player.wordle++;
-          if (score.bonus_connections) player.connections++;
-          if (score.bonus_strands) player.strands++;
-        }
+      monthlyScores?.forEach((score: ScoreRecord) => {
+        // TypeScript now knows score.player_id is 1, 2, or 3
+        const player = totals[score.player_id];
+        player.score += score.total;
+        if (score.bonus_wordle) player.wordle++;
+        if (score.bonus_connections) player.connections++;
+        if (score.bonus_strands) player.strands++;
       });
 
       // 3. Store in monthly_archives table
