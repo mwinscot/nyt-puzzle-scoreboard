@@ -4,20 +4,11 @@ import { publicSupabase } from '@/lib/supabase';
 import { PlayerScores, PlayerData, PlayerName } from '@/types';
 import Link from 'next/link';
 
-async function getData(month: string) {
-  const [yearStr, monthStr] = month.split('-');
-  const lastDay = new Date(parseInt(yearStr), parseInt(monthStr), 0).getDate();
-  const startDate = `${month}-01`;
-  const endDate = `${month}-${String(lastDay).padStart(2, '0')}`;
-
-  const { data: scoresData } = await publicSupabase
-    .from('daily_scores')
-    .select(`*, players (name)`)
-    .gte('date', startDate)
-    .lte('date', endDate);
-
-  return scoresData || [];
-}
+const initialPlayerData = (): PlayerData => ({
+  dailyScores: {},
+  total: 0,
+  totalBonuses: { wordle: 0, connections: 0, strands: 0 }
+});
 
 function getPlayerKeyFromName(name: PlayerName): keyof PlayerScores {
   switch (name) {
@@ -29,19 +20,25 @@ function getPlayerKeyFromName(name: PlayerName): keyof PlayerScores {
   }
 }
 
-const initialPlayerData = (): PlayerData => ({
-  dailyScores: {},
-  total: 0,
-  totalBonuses: { wordle: 0, connections: 0, strands: 0 }
-});
-
 export default async function ArchivePage({
   params
 }: {
   params: { month: string }
 }) {
-  const scoresData = await getData(params.month);
-  
+  const { month } = params;
+  const [yearStr, monthStr] = month.split('-');
+  const year = parseInt(yearStr);
+  const monthNum = parseInt(monthStr);
+  const lastDay = new Date(year, monthNum, 0).getDate();
+  const startDate = `${month}-01`;
+  const endDate = `${month}-${String(lastDay).padStart(2, '0')}`;
+
+  const { data: scoresData } = await publicSupabase
+    .from('daily_scores')
+    .select(`*, players (name)`)
+    .gte('date', startDate)
+    .lte('date', endDate);
+
   const scores: PlayerScores = {
     player1: initialPlayerData(),
     player2: initialPlayerData(),
@@ -49,7 +46,7 @@ export default async function ArchivePage({
     player4: initialPlayerData()
   };
 
-  scoresData.forEach((score) => {
+  scoresData?.forEach((score) => {
     const playerKey = getPlayerKeyFromName(score.players.name as PlayerName);
     
     scores[playerKey].dailyScores[score.date] = {
@@ -72,7 +69,7 @@ export default async function ArchivePage({
     if (score.bonus_strands) scores[playerKey].totalBonuses.strands++;
   });
 
-  const monthDate = new Date(`${params.month}-01`);
+  const monthDate = new Date(`${month}-01`);
   const monthName = monthDate.toLocaleString('default', { month: 'long', year: 'numeric' });
 
   return (
