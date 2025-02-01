@@ -1,5 +1,27 @@
 // src/types/index.ts
 
+export interface DailyBonusPoints {
+  wordleQuick: boolean;
+  connectionsPerfect: boolean;
+  strandsSpanagram: boolean;
+}
+
+export interface BonusPoints {
+  wordle: number;
+  connections: number;
+  strands: number;
+}
+
+export interface DailyScore {
+  date: string;
+  wordle: number;
+  connections: number;
+  strands: number;
+  total: number;
+  bonusPoints: DailyBonusPoints;
+  finalized: boolean;
+}
+
 export interface PlayerData {
   dailyScores: {
     [key: string]: DailyScore;
@@ -15,21 +37,8 @@ export interface PlayerScores {
   player4: PlayerData;
 }
 
-export interface DailyScore {
-  date: string;
-  wordle: number;
-  connections: number;
-  strands: number;
-  total: number;
-  bonusPoints: BonusPoints;
-  finalized: boolean;
-}
-
-export interface BonusPoints {
-  wordle: number;
-  connections: number;
-  strands: number;
-}
+export type PlayerName = 'Keith' | 'Mike' | 'Colleen' | 'Toby';
+export type PlayerKey = 'player1' | 'player2' | 'player3' | 'player4';
 
 export interface ScoreRecord {
   id: number;
@@ -49,12 +58,3 @@ export interface ScoreRecord {
     name: string;
   };
 }
-
-export interface ArchivedScores {
-  month: string;
-  archive_data: PlayerScores;
-  created_at: string;
-}
-
-export type PlayerName = 'Keith' | 'Mike' | 'Colleen' | 'Toby';
-export type PlayerKey = 'player1' | 'player2' | 'player3' | 'player4';

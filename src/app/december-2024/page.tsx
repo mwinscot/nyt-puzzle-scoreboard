@@ -4,23 +4,11 @@ import React, { useEffect, useState } from 'react';
 import { publicSupabase } from '@/lib/supabase';
 import ScoreCharts from '@/components/ScoreCharts';
 import { DecemberScoreHeader } from '@/components/DecemberScoreHeader';
-import { PlayerScores, PlayerName, PlayerData, PlayerKey } from '@/types';
+import { PlayerScores, PlayerName, PlayerData, PlayerKey, ScoreRecord } from '@/types';
 
-interface ScoreRecord {
-  id: number;
-  date: string;
-  player_id: number;
-  wordle: number;
-  connections: number;
-  strands: number;
-  total: number;
-  bonus_wordle: boolean;
-  bonus_connections: boolean;
-  bonus_strands: boolean;
-  finalized: boolean;
-  players: {
-    name: string;
-  };
+// Only define additional types that aren't in your main types file
+interface DecemberScore extends Omit<ScoreRecord, 'player_id'> {
+  player_id: 1 | 2 | 3 | 4;
 }
 
 export default function DecemberScoreboard() {
@@ -74,16 +62,17 @@ export default function DecemberScoreboard() {
         player1: initialPlayerData(),
         player2: initialPlayerData(),
         player3: initialPlayerData(),
-        player4: initialPlayerData()  // Required by type but won't be used
+        player4: initialPlayerData()
       };
 
-      scoresData?.forEach((score: ScoreRecord) => {
+      scoresData?.forEach((score: DecemberScore) => {
         const playerName = score.players.name as PlayerName;
         const playerKey = getPlayerKeyFromName(playerName);
         
         // Skip player4 data for December scores
         if (playerKey === 'player4') return;
         
+        // Add daily scores with proper bonus point structure
         newScores[playerKey].dailyScores[score.date] = {
           date: score.date,
           wordle: score.wordle,
@@ -98,6 +87,7 @@ export default function DecemberScoreboard() {
           finalized: score.finalized
         };
 
+        // Update totals
         newScores[playerKey].total += score.total;
         if (score.bonus_wordle) newScores[playerKey].totalBonuses.wordle++;
         if (score.bonus_connections) newScores[playerKey].totalBonuses.connections++;
