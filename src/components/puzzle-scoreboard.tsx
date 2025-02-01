@@ -330,7 +330,15 @@ const PuzzleScoreboard: React.FC = () => {
           <div className="mb-4 flex justify-between items-center">
             <ArchiveButton onArchiveComplete={handleArchiveComplete} />
             <Link 
-              href={`/archives/${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`}
+              href={(() => {
+                const date = new Date();
+                // Go back one month
+                date.setMonth(date.getMonth() - 1);
+                // Format with correct year if we crossed year boundary
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                return `/archives/${year}-${month}`;
+              })()}
               className="text-blue-500 hover:text-blue-600 flex items-center gap-2"
             >
               View Previous Month
