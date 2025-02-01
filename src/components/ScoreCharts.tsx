@@ -1,22 +1,31 @@
 import React from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar } from 'recharts';
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  BarChart,
+  Bar
+} from 'recharts';
 import { PlayerScores } from '@/types';
-import { convertToPST } from '@/utils/dateUtils';
 
 interface ScoreChartsProps {
   scores: PlayerScores;
 }
 
 const ScoreCharts: React.FC<ScoreChartsProps> = ({ scores }) => {
-  const allDates = Object.keys(scores.player1.dailyScores).sort();
-
-  const chartData = allDates.map(date => ({
+  // Transform scores into chart data
+  const chartData = Object.keys(scores.player1.dailyScores).map(date => ({
     date,
     Keith: scores.player1.dailyScores[date]?.total || 0,
     Mike: scores.player2.dailyScores[date]?.total || 0,
     Colleen: scores.player3.dailyScores[date]?.total || 0,
     Toby: scores.player4.dailyScores[date]?.total || 0
-  }));
+  })).sort((a, b) => a.date.localeCompare(b.date));
 
   let keithTotal = 0;
   let mikeTotal = 0;
@@ -66,7 +75,10 @@ const ScoreCharts: React.FC<ScoreChartsProps> = ({ scores }) => {
         <ResponsiveContainer>
           <LineChart data={cumulativeData}>
             <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="date" />
+            <XAxis 
+              dataKey="date" 
+              tickFormatter={(date) => new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+            />
             <YAxis />
             <Tooltip />
             <Legend />
