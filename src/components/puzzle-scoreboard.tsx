@@ -256,22 +256,21 @@ const PuzzleScoreboard: React.FC = () => {
               </button>
             </div>
             {currentEntry && (
-              <div className="mt-4">
-                <input
-                  type="text"
-                  value={inputText}
-                  onChange={(e) => setInputText(e.target.value)}
-                  className="w-full p-2 border rounded"
-                  placeholder="Enter scores..."
-                />
-                <button
-                  onClick={handleSubmit}
-                  className="mt-2 p-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-                >
-                  Submit Score
-                </button>
-              </div>
-            )}
+  <div className="mt-4">
+    <textarea
+      value={inputText}
+      onChange={(e) => setInputText(e.target.value)}
+      className="w-full p-2 border rounded min-h-[150px] font-mono"
+      placeholder="Paste scores here..."
+    />
+    <button
+      onClick={handleSubmit}
+      className="mt-2 p-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+    >
+      Submit Score
+    </button>
+  </div>
+)}
           </div>
         )}
 
