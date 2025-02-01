@@ -47,7 +47,8 @@ export const archiveMonthlyScores = async (
     const archiveData: PlayerScores = {
       player1: initialPlayerData(),
       player2: initialPlayerData(),
-      player3: initialPlayerData()
+      player3: initialPlayerData(),
+      player4: initialPlayerData()  // Added player4
     };
 
     monthlyScores?.forEach((score: ScoreRecord) => {
@@ -131,28 +132,4 @@ export const listArchivedMonths = async (): Promise<string[]> => {
     console.error('Error listing archived months:', error);
     return [];
   }
-};
-
-export const getDateRangeForMonth = (month: string) => {
-  const [year, monthStr] = month.split('-');
-  const monthNum = parseInt(monthStr, 10) - 1; // JS months are 0-based
-  
-  const startDate = new Date(parseInt(year), monthNum, 1);
-  const endDate = new Date(parseInt(year), monthNum + 1, 0);
-
-  return {
-    startDate: startDate.toISOString().split('T')[0],
-    endDate: endDate.toISOString().split('T')[0]
-  };
-};
-
-export const getCurrentMonth = (): string => {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-};
-
-export const getPreviousMonth = (): string => {
-  const now = new Date();
-  const prevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-  return `${prevMonth.getFullYear()}-${String(prevMonth.getMonth() + 1).padStart(2, '0')}`;
 };
