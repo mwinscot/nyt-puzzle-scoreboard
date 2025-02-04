@@ -1,10 +1,16 @@
-import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import { TotalScoreHeader } from '@/components/TotalScoreHeader';
 import ScoreCharts from '@/components/ScoreCharts';
-import { PlayerScores, PlayerData, PlayerName } from '@/types';
+import { PlayerScores, PlayerData } from '@/types';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { createClient } from '@supabase/supabase-js';
+
+// Initialize Supabase client
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
 const initialPlayerData = (): PlayerData => ({
   dailyScores: {},
@@ -13,39 +19,30 @@ const initialPlayerData = (): PlayerData => ({
 });
 
 export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
-async function getData(month: string) {
-  const cookieStore = cookies();
-  const supabase = createServerComponentClient({ cookies: () => cookieStore });
+export default async function Page({ params }: { params: { month: string } }) {
+  // Validate month format
+  if (!/^\d{4}-\d{2}$/.test(params.month)) {
+    notFound();
+  }
 
-  if (!/^\d{4}-\d{2}$/.test(month)) return null;
+  const [year, month] = params.month.split('-').map(Number);
+  const startDate = `${params.month}-01`;
+  const endDate = `${params.month}-${new Date(year, month, 0).getDate().toString().padStart(2, '0')}`;
 
-  const [yearStr, monthStr] = month.split('-');
-  const year = parseInt(yearStr);
-  const monthNum = parseInt(monthStr);
-  
-  // Calculate dates correctly
-  const startDate = `${month}-01`;
-  const lastDay = new Date(year, monthNum, 0).getDate();
-  const endDate = `${month}-${String(lastDay).padStart(2, '0')}`;
-
-  const { data } = await supabase
+  // Fetch data
+  const { data: scoresData } = await supabase
     .from('daily_scores')
     .select(`*, players (name)`)
     .gte('date', startDate)
     .lte('date', endDate);
 
-  return data;
-}
+  if (!scoresData?.length) {
+    notFound();
+  }
 
-export default async function MonthArchive({
-  params
-}: {
-  params: { month: string }
-}) {
-  const data = await getData(params.month);
-  if (!data) notFound();
-
+  // Initialize scores object
   const scores: PlayerScores = {
     player1: initialPlayerData(),
     player2: initialPlayerData(),
@@ -53,11 +50,17 @@ export default async function MonthArchive({
     player4: initialPlayerData()
   };
 
-  data.forEach((score) => {
-    const playerKey = score.players.name === 'Keith' ? 'player1' 
-      : score.players.name === 'Mike' ? 'player2'
-      : score.players.name === 'Colleen' ? 'player3'
-      : 'player4';
+  // Process scores
+  scoresData.forEach((score) => {
+    const playerMap = {
+      'Keith': 'player1',
+      'Mike': 'player2',
+      'Colleen': 'player3',
+      'Toby': 'player4'
+    } as const;
+
+    const playerKey = playerMap[score.players.name as keyof typeof playerMap];
+    if (!playerKey) return;
 
     scores[playerKey].dailyScores[score.date] = {
       date: score.date,
@@ -66,24 +69,18 @@ export default async function MonthArchive({
       strands: score.strands || 0,
       total: score.total || 0,
       bonusPoints: {
-        wordleQuick: !!score.bonus_wordle,
-        connectionsPerfect: !!score.bonus_connections,
-        strandsSpanagram: !!score.bonus_strands
+        wordleQuick: Boolean(score.bonus_wordle),
+        connectionsPerfect: Boolean(score.bonus_connections),
+        strandsSpanagram: Boolean(score.bonus_strands)
       },
-      finalized: !!score.finalized
+      finalized: Boolean(score.finalized)
     };
 
     scores[playerKey].total += score.total || 0;
-    if (score.bonus_wordle) scores[playerKey].totalBonuses.wordle++;
-    if (score.bonus_connections) scores[playerKey].totalBonuses.connections++;
-    if (score.bonus_strands) scores[playerKey].totalBonuses.strands++;
   });
 
   const monthDate = new Date(`${params.month}-01`);
-  const monthName = monthDate.toLocaleString('default', { 
-    month: 'long',
-    year: 'numeric'
-  });
+  const monthName = monthDate.toLocaleString('default', { month: 'long', year: 'numeric' });
 
   return (
     <div className="w-full max-w-4xl mx-auto p-6">
