@@ -1,19 +1,50 @@
+import { Suspense } from 'react';
 import { TotalScoreHeader } from '@/components/TotalScoreHeader';
 import ScoreCharts from '@/components/ScoreCharts';
 import { PlayerScores } from '@/types';
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
-import { getMonthScores } from '@/lib/supabase-server';
+import { redirect } from 'next/navigation';
+import { createClient } from '@supabase/supabase-js';
 
-export const dynamic = 'force-dynamic';
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
-export default async function Page({ params }: { params: { month: string } }) {
-  if (!/^\d{4}-\d{2}$/.test(params.month)) {
-    notFound();
+interface ScoreData {
+  date: string;
+  wordle: number;
+  connections: number;
+  strands: number;
+  total: number;
+  bonus_wordle: boolean;
+  bonus_connections: boolean;
+  bonus_strands: boolean;
+  finalized: boolean;
+  players: {
+    name: 'Keith' | 'Mike' | 'Colleen' | 'Toby';
+  };
+}
+
+async function ArchivePage({ params }: { params: { month: string } }) {
+  const [yearStr, monthStr] = params.month.split('-');
+  const year = parseInt(yearStr);
+  const month = parseInt(monthStr);
+  
+  if (isNaN(year) || isNaN(month) || month < 1 || month > 12) {
+    redirect('/');
   }
 
-  const data = await getMonthScores(params.month);
-  if (!data) notFound();
+  const lastDay = new Date(year, month, 0).getDate();
+  const { data } = await supabase
+    .from('daily_scores')
+    .select('*, players (name)')
+    .gte('date', `${params.month}-01`)
+    .lte('date', `${params.month}-${lastDay}`);
+
+  if (!data?.length) {
+    redirect('/');
+  }
 
   const scores: PlayerScores = {
     player1: { dailyScores: {}, total: 0, totalBonuses: { wordle: 0, connections: 0, strands: 0 } },
@@ -22,7 +53,7 @@ export default async function Page({ params }: { params: { month: string } }) {
     player4: { dailyScores: {}, total: 0, totalBonuses: { wordle: 0, connections: 0, strands: 0 } }
   };
 
-  data.forEach(score => {
+  (data as ScoreData[]).forEach(score => {
     const playerKey = score.players.name === 'Keith' ? 'player1'
       : score.players.name === 'Mike' ? 'player2'
       : score.players.name === 'Colleen' ? 'player3'
@@ -35,18 +66,20 @@ export default async function Page({ params }: { params: { month: string } }) {
       strands: score.strands || 0,
       total: score.total || 0,
       bonusPoints: {
-        wordleQuick: !!score.bonus_wordle,
-        connectionsPerfect: !!score.bonus_connections,
-        strandsSpanagram: !!score.bonus_strands
+        wordleQuick: Boolean(score.bonus_wordle),
+        connectionsPerfect: Boolean(score.bonus_connections),
+        strandsSpanagram: Boolean(score.bonus_strands)
       },
-      finalized: !!score.finalized
+      finalized: Boolean(score.finalized)
     };
 
     scores[playerKey].total += score.total || 0;
   });
 
-  const monthDate = new Date(`${params.month}-01`);
-  const monthName = monthDate.toLocaleString('default', { month: 'long', year: 'numeric' });
+  const monthName = new Date(year, month - 1).toLocaleString('default', { 
+    month: 'long', 
+    year: 'numeric' 
+  });
 
   return (
     <div className="w-full max-w-4xl mx-auto p-6">
@@ -72,5 +105,13 @@ export default async function Page({ params }: { params: { month: string } }) {
         <ScoreCharts scores={scores} />
       </div>
     </div>
+  );
+}
+
+export default async function Page(props: { params: { month: string } }) {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <ArchivePage {...props} />
+    </Suspense>
   );
 }
