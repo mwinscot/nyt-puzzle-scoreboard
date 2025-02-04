@@ -1,14 +1,10 @@
+import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
+import { cookies } from 'next/headers';
 import { TotalScoreHeader } from '@/components/TotalScoreHeader';
 import ScoreCharts from '@/components/ScoreCharts';
-import { createClient } from '@supabase/supabase-js';
 import { PlayerScores, PlayerData, PlayerName } from '@/types';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
 
 const initialPlayerData = (): PlayerData => ({
   dailyScores: {},
@@ -16,45 +12,39 @@ const initialPlayerData = (): PlayerData => ({
   totalBonuses: { wordle: 0, connections: 0, strands: 0 }
 });
 
-function getPlayerKeyFromName(name: PlayerName): keyof PlayerScores {
-  switch (name) {
-    case 'Keith': return 'player1';
-    case 'Mike': return 'player2';
-    case 'Colleen': return 'player3';
-    case 'Toby': return 'player4';
-    default: throw new Error('Invalid player name');
-  }
-}
+export const dynamic = 'force-dynamic';
 
-export default async function Page({ params }: { params: { month: string } }) {
-  if (!/^\d{4}-\d{2}$/.test(params.month)) {
-    notFound();
-  }
+async function getData(month: string) {
+  const cookieStore = cookies();
+  const supabase = createServerComponentClient({ cookies: () => cookieStore });
 
-  const [yearStr, monthStr] = params.month.split('-');
+  if (!/^\d{4}-\d{2}$/.test(month)) return null;
+
+  const [yearStr, monthStr] = month.split('-');
   const year = parseInt(yearStr);
   const monthNum = parseInt(monthStr);
   
-  // Get last day of month correctly
-  const nextMonth = new Date(year, monthNum, 1);
-  const lastDay = new Date(nextMonth.getTime() - 1).getDate();
-  
-  // Format dates properly for SQL query
-  const startDate = params.month + '-01';
-  const endDate = params.month + '-' + String(lastDay).padStart(2, '0');
+  // Calculate dates correctly
+  const startDate = `${month}-01`;
+  const lastDay = new Date(year, monthNum, 0).getDate();
+  const endDate = `${month}-${String(lastDay).padStart(2, '0')}`;
 
-  console.log('Fetching scores from', startDate, 'to', endDate); // Debug log
-
-  const { data: scoresData } = await supabase
+  const { data } = await supabase
     .from('daily_scores')
     .select(`*, players (name)`)
     .gte('date', startDate)
     .lte('date', endDate);
 
-  if (!scoresData || scoresData.length === 0) {
-    console.log('No scores found for date range'); // Debug log
-    notFound();
-  }
+  return data;
+}
+
+export default async function MonthArchive({
+  params
+}: {
+  params: { month: string }
+}) {
+  const data = await getData(params.month);
+  if (!data) notFound();
 
   const scores: PlayerScores = {
     player1: initialPlayerData(),
@@ -63,30 +53,34 @@ export default async function Page({ params }: { params: { month: string } }) {
     player4: initialPlayerData()
   };
 
-  // Process scores
-  scoresData.forEach((score) => {
-    const playerKey = getPlayerKeyFromName(score.players.name as PlayerName);
-    
-    if (!scores[playerKey].dailyScores[score.date]) {
-      scores[playerKey].dailyScores[score.date] = {
-        date: score.date,
-        wordle: score.wordle || 0,
-        connections: score.connections || 0,
-        strands: score.strands || 0,
-        total: score.total || 0,
-        bonusPoints: {
-          wordleQuick: !!score.bonus_wordle,
-          connectionsPerfect: !!score.bonus_connections,
-          strandsSpanagram: !!score.bonus_strands
-        },
-        finalized: !!score.finalized
-      };
+  data.forEach((score) => {
+    const playerKey = score.players.name === 'Keith' ? 'player1' 
+      : score.players.name === 'Mike' ? 'player2'
+      : score.players.name === 'Colleen' ? 'player3'
+      : 'player4';
 
-      scores[playerKey].total += score.total || 0;
-    }
+    scores[playerKey].dailyScores[score.date] = {
+      date: score.date,
+      wordle: score.wordle || 0,
+      connections: score.connections || 0,
+      strands: score.strands || 0,
+      total: score.total || 0,
+      bonusPoints: {
+        wordleQuick: !!score.bonus_wordle,
+        connectionsPerfect: !!score.bonus_connections,
+        strandsSpanagram: !!score.bonus_strands
+      },
+      finalized: !!score.finalized
+    };
+
+    scores[playerKey].total += score.total || 0;
+    if (score.bonus_wordle) scores[playerKey].totalBonuses.wordle++;
+    if (score.bonus_connections) scores[playerKey].totalBonuses.connections++;
+    if (score.bonus_strands) scores[playerKey].totalBonuses.strands++;
   });
 
-  const monthName = new Date(`${params.month}-01`).toLocaleString('default', { 
+  const monthDate = new Date(`${params.month}-01`);
+  const monthName = monthDate.toLocaleString('default', { 
     month: 'long',
     year: 'numeric'
   });
