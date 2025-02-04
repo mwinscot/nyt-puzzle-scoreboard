@@ -2,9 +2,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  eslint: {
-    ignoreDuringBuilds: false, // Set to true if you want to handle ESLint errors as warnings
-  },
+  experimental: {
+    serverActions: true
+  }
 }
 
-module.exports = nextConfig;
+module.exports = nextConfig

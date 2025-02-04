@@ -1,9 +1,14 @@
 import { TotalScoreHeader } from '@/components/TotalScoreHeader';
 import ScoreCharts from '@/components/ScoreCharts';
-import { publicSupabase } from '@/lib/supabase';
+import { createClient } from '@supabase/supabase-js';
 import { PlayerScores, PlayerData, PlayerName } from '@/types';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
 const initialPlayerData = (): PlayerData => ({
   dailyScores: {},
@@ -21,10 +26,8 @@ function getPlayerKeyFromName(name: PlayerName): keyof PlayerScores {
   }
 }
 
-export const runtime = 'edge';
-
 export default async function Page({ params }: { params: { month: string } }) {
-  if (!params.month || !/^\d{4}-\d{2}$/.test(params.month)) {
+  if (!/^\d{4}-\d{2}$/.test(params.month)) {
     notFound();
   }
 
@@ -32,20 +35,26 @@ export default async function Page({ params }: { params: { month: string } }) {
   const year = parseInt(yearStr);
   const monthNum = parseInt(monthStr);
   
-  // Validate date
-  if (isNaN(year) || isNaN(monthNum) || monthNum < 1 || monthNum > 12) {
-    notFound();
-  }
+  // Get last day of month correctly
+  const nextMonth = new Date(year, monthNum, 1);
+  const lastDay = new Date(nextMonth.getTime() - 1).getDate();
+  
+  // Format dates properly for SQL query
+  const startDate = params.month + '-01';
+  const endDate = params.month + '-' + String(lastDay).padStart(2, '0');
 
-  const lastDay = new Date(year, monthNum, 0).getDate();
-  const startDate = `${params.month}-01`;
-  const endDate = `${params.month}-${String(lastDay).padStart(2, '0')}`;
+  console.log('Fetching scores from', startDate, 'to', endDate); // Debug log
 
-  const { data: scoresData } = await publicSupabase
+  const { data: scoresData } = await supabase
     .from('daily_scores')
     .select(`*, players (name)`)
     .gte('date', startDate)
     .lte('date', endDate);
+
+  if (!scoresData || scoresData.length === 0) {
+    console.log('No scores found for date range'); // Debug log
+    notFound();
+  }
 
   const scores: PlayerScores = {
     player1: initialPlayerData(),
@@ -54,31 +63,33 @@ export default async function Page({ params }: { params: { month: string } }) {
     player4: initialPlayerData()
   };
 
-  scoresData?.forEach((score) => {
+  // Process scores
+  scoresData.forEach((score) => {
     const playerKey = getPlayerKeyFromName(score.players.name as PlayerName);
     
-    scores[playerKey].dailyScores[score.date] = {
-      date: score.date,
-      wordle: score.wordle,
-      connections: score.connections,
-      strands: score.strands,
-      total: score.total,
-      bonusPoints: {
-        wordleQuick: score.bonus_wordle,
-        connectionsPerfect: score.bonus_connections,
-        strandsSpanagram: score.bonus_strands
-      },
-      finalized: score.finalized
-    };
+    if (!scores[playerKey].dailyScores[score.date]) {
+      scores[playerKey].dailyScores[score.date] = {
+        date: score.date,
+        wordle: score.wordle || 0,
+        connections: score.connections || 0,
+        strands: score.strands || 0,
+        total: score.total || 0,
+        bonusPoints: {
+          wordleQuick: !!score.bonus_wordle,
+          connectionsPerfect: !!score.bonus_connections,
+          strandsSpanagram: !!score.bonus_strands
+        },
+        finalized: !!score.finalized
+      };
 
-    scores[playerKey].total += score.total;
-    if (score.bonus_wordle) scores[playerKey].totalBonuses.wordle++;
-    if (score.bonus_connections) scores[playerKey].totalBonuses.connections++;
-    if (score.bonus_strands) scores[playerKey].totalBonuses.strands++;
+      scores[playerKey].total += score.total || 0;
+    }
   });
 
-  const monthDate = new Date(`${params.month}-01`);
-  const monthName = monthDate.toLocaleString('default', { month: 'long', year: 'numeric' });
+  const monthName = new Date(`${params.month}-01`).toLocaleString('default', { 
+    month: 'long',
+    year: 'numeric'
+  });
 
   return (
     <div className="w-full max-w-4xl mx-auto p-6">
