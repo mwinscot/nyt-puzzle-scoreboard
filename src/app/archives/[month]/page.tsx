@@ -1,60 +1,60 @@
-import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
 import { TotalScoreHeader } from '@/components/TotalScoreHeader';
 import ScoreCharts from '@/components/ScoreCharts';
 import { PlayerScores } from '@/types';
 import Link from 'next/link';
+import { createClient } from '@supabase/supabase-js';
 
-export const dynamic = 'force-dynamic';
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
-function initializeScores(): PlayerScores {
-  return {
+export default async function Page({ params }: { params: { month: string } }) {
+  const scores: PlayerScores = {
     player1: { dailyScores: {}, total: 0, totalBonuses: { wordle: 0, connections: 0, strands: 0 } },
     player2: { dailyScores: {}, total: 0, totalBonuses: { wordle: 0, connections: 0, strands: 0 } },
     player3: { dailyScores: {}, total: 0, totalBonuses: { wordle: 0, connections: 0, strands: 0 } },
     player4: { dailyScores: {}, total: 0, totalBonuses: { wordle: 0, connections: 0, strands: 0 } }
   };
-}
-
-export default async function Page({ params }: { params: { month: string } }) {
-  const cookieStore = cookies();
-  const supabase = createServerComponentClient({ cookies: () => cookieStore });
   
-  const [year, month] = params.month.split('-').map(Number);
-  const lastDay = new Date(year, month, 0).getDate();
+  try {
+    const [year, month] = params.month.split('-').map(Number);
+    const lastDay = new Date(year, month, 0).getDate();
+    const { data } = await supabase
+      .from('daily_scores')
+      .select('*, players (name)')
+      .gte('date', `${params.month}-01`)
+      .lte('date', `${params.month}-${String(lastDay).padStart(2, '0')}`);
 
-  const { data } = await supabase
-    .from('daily_scores')
-    .select('*, players (name)')
-    .gte('date', `${params.month}-01`)
-    .lte('date', `${params.month}-${String(lastDay).padStart(2, '0')}`);
+    if (data) {
+      data.forEach(score => {
+        const playerKey = score.players.name === 'Keith' ? 'player1'
+          : score.players.name === 'Mike' ? 'player2'
+          : score.players.name === 'Colleen' ? 'player3'
+          : 'player4';
 
-  const scores = initializeScores();
+        scores[playerKey].dailyScores[score.date] = {
+          date: score.date,
+          wordle: score.wordle || 0,
+          connections: score.connections || 0,
+          strands: score.strands || 0,
+          total: score.total || 0,
+          bonusPoints: {
+            wordleQuick: !!score.bonus_wordle,
+            connectionsPerfect: !!score.bonus_connections,
+            strandsSpanagram: !!score.bonus_strands
+          },
+          finalized: !!score.finalized
+        };
 
-  data?.forEach(score => {
-    const playerKey = 
-      score.players.name === 'Keith' ? 'player1' :
-      score.players.name === 'Mike' ? 'player2' :
-      score.players.name === 'Colleen' ? 'player3' : 'player4';
+        scores[playerKey].total += score.total || 0;
+      });
+    }
+  } catch (error) {
+    console.error('Error fetching data:', error);
+  }
 
-    scores[playerKey].dailyScores[score.date] = {
-      date: score.date,
-      wordle: score.wordle || 0,
-      connections: score.connections || 0,
-      strands: score.strands || 0,
-      total: score.total || 0,
-      bonusPoints: {
-        wordleQuick: !!score.bonus_wordle,
-        connectionsPerfect: !!score.bonus_connections,
-        strandsSpanagram: !!score.bonus_strands
-      },
-      finalized: !!score.finalized
-    };
-
-    scores[playerKey].total += score.total || 0;
-  });
-
-  const monthName = new Date(year, month - 1).toLocaleString('default', { 
+  const monthName = new Date(`${params.month}-01`).toLocaleString('default', { 
     month: 'long', 
     year: 'numeric' 
   });
