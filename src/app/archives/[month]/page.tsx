@@ -1,44 +1,20 @@
 import { TotalScoreHeader } from '@/components/TotalScoreHeader';
 import ScoreCharts from '@/components/ScoreCharts';
-import { createClient } from '@supabase/supabase-js';
 import { PlayerScores } from '@/types';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-  { auth: { persistSession: false } }
-);
+import { getMonthScores } from '@/lib/supabase-server';
 
 export const dynamic = 'force-dynamic';
 
-async function getData(month: string) {
-  try {
-    const [year, monthNum] = month.split('-').map(Number);
-    const lastDay = new Date(year, monthNum, 0).getDate();
-    const startDate = `${month}-01`;
-    const endDate = `${month}-${String(lastDay).padStart(2, '0')}`;
-
-    const { data, error } = await supabase
-      .from('daily_scores')
-      .select('*, players (name)')
-      .gte('date', startDate)
-      .lte('date', endDate);
-
-    if (error) throw error;
-    return data;
-  } catch (error) {
-    console.error('Error fetching data:', error);
-    return null;
-  }
-}
-
 export default async function Page({ params }: { params: { month: string } }) {
-  const data = await getData(params.month);
+  if (!/^\d{4}-\d{2}$/.test(params.month)) {
+    notFound();
+  }
+
+  const data = await getMonthScores(params.month);
   if (!data) notFound();
 
-  // Process the data into scores format
   const scores: PlayerScores = {
     player1: { dailyScores: {}, total: 0, totalBonuses: { wordle: 0, connections: 0, strands: 0 } },
     player2: { dailyScores: {}, total: 0, totalBonuses: { wordle: 0, connections: 0, strands: 0 } },
@@ -73,7 +49,7 @@ export default async function Page({ params }: { params: { month: string } }) {
   const monthName = monthDate.toLocaleString('default', { month: 'long', year: 'numeric' });
 
   return (
-    <main className="w-full max-w-4xl mx-auto p-6">
+    <div className="w-full max-w-4xl mx-auto p-6">
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-2xl font-bold">{monthName} Archive</h1>
         <Link href="/" className="text-blue-500 hover:text-blue-600">
@@ -95,6 +71,6 @@ export default async function Page({ params }: { params: { month: string } }) {
       <div className="mt-8">
         <ScoreCharts scores={scores} />
       </div>
-    </main>
+    </div>
   );
 }
