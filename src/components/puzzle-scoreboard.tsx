@@ -365,24 +365,27 @@ const PuzzleScoreboard: React.FC = () => {
     if (strandsSection) {
       gameScores.strands = 1; // Base score
       
+      // Split lines and get only the game lines (skip header and title)
       const lines = strandsSection.split('\n')
-        .slice(2)
-        .map(line => line.trim());
+        .map(line => line.trim())
+        .filter(line => line.includes('🟡') || line.includes('🔵')); // Only game moves
       
-      // Changed to look for yellow circles (spanagram)
-      const spanagramIndex = lines.findIndex(line => (line.match(/🟡/g) || []).length >= 3);
-      const spanagramInFirstThree = spanagramIndex !== -1 && spanagramIndex < 3;
+      console.log('Strands all moves:', lines);
+      
+      // Check first line for yellow circles
+      const firstLine = lines[0] || '';
+      const yellowCount = (firstLine.match(/🟡/g) || []).length;
       
       console.log('Strands analysis:', {
-        moves: lines,
-        spanagramIndex,
-        spanagramInFirstThree,
-        moveCount: lines.length
+        firstLine,
+        yellowCount,
+        allMoves: lines
       });
 
-      if (spanagramInFirstThree) {
+      if (yellowCount >= 1) {
         bonusPoints.strandsSpanagram = true;
         gameScores.strands = 2;
+        console.log('Yellow circle found in first move: +1 bonus point');
       }
 
       console.log('Strands final:', {
