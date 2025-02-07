@@ -274,7 +274,7 @@ const PuzzleScoreboard: React.FC = () => {
     const sections = input.split(/\n(?=[A-Za-z])/);
     console.log('Sections:', sections);
 
-    // Parse Wordle (1 point for completion)
+    // Parse Wordle (no changes needed)
     const wordleSection = sections.find(s => s.startsWith('Wordle'));
     if (wordleSection) {
       gameScores.wordle = 1; // Base point for completing
@@ -287,44 +287,37 @@ const PuzzleScoreboard: React.FC = () => {
       console.log('Wordle:', { base: gameScores.wordle, bonus: bonusPoints.wordleQuick });
     }
 
-    // Parse Connections
-    const connectionsSection = sections.find(s => s.includes('Connections'));
-    if (connectionsSection) {
-      const lines = connectionsSection.split('\n').filter(line => /[🟪🟩🟨🟦]{4}/.test(line));
-      const purpleIndex = lines.findIndex(line => line.includes('🟪🟪🟪🟪'));
+    // Parse Connections with fixed section handling
+    const connectionsText = sections.find(s => s.includes('Connections')) || '';
+    const puzzleSection = sections.find(s => s.includes('Puzzle #')) || '';
+    
+    if (connectionsText && puzzleSection) {
+      console.log('Parsing Connections section:', puzzleSection);
+      
+      const lines = puzzleSection
+        .split('\n')
+        .filter(line => /[🟪🟩🟨🟦]{4}/.test(line));
+      
+      console.log('Connection moves:', lines);
+      
       const hasErrors = lines.some(line => line.includes('🟨'));
       const completed = lines.some(line => line.includes('🟩🟩🟩🟩'));
+      const purpleIndex = lines.findIndex(line => line.includes('🟪🟪🟪🟪'));
+      
+      console.log('Connection analysis:', { hasErrors, completed, purpleIndex });
 
       if (completed) {
-        console.log('Connections moves:', { lines, purpleIndex, hasErrors });
-        
         if (!hasErrors) {
-          // Perfect game
-          if (purpleIndex === 0) {
-            gameScores.connections = 3; // Purple first and perfect
-          } else {
-            gameScores.connections = 2; // Perfect but purple not first
-          }
+          gameScores.connections = purpleIndex === 0 ? 3 : 2;
         } else {
-          // Game with errors
-          if (purpleIndex === 0) {
-            gameScores.connections = 2; // Purple first but errors
-          } else {
-            gameScores.connections = 1; // Completed with errors
-          }
-        
-          // Update logging with scoped variables
-          console.log('Connections:', { 
-            score: gameScores.connections, 
-            purpleFirst: purpleIndex === 0, 
-            hasErrors,
-            completed 
-          });
+          gameScores.connections = purpleIndex === 0 ? 2 : 1;
         }
       }
+
+      console.log('Connections score:', gameScores.connections);
     }
 
-    // Parse Strands
+    // Parse Strands (no changes needed)
     const strandsSection = sections.find(s => s.startsWith('Strands'));
     if (strandsSection) {
       gameScores.strands = 1; // Base point for completing
