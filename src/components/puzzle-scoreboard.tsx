@@ -293,15 +293,11 @@ const PuzzleScoreboard: React.FC = () => {
       
       console.log('Wordle lines:', lines);
       
-      // Find the line with the solution (all green squares)
-      const solutionLine = lines.findIndex(line => /🟩{5}/.test(line));
-      
       // Count actual moves (lines with squares)
       const actualMoves = lines.filter(line => /[🟩🟨⬜]/g.test(line));
       
       console.log('Wordle analysis:', {
         lines,
-        solutionLine,
         actualMoves,
         moveCount: actualMoves.length
       });
@@ -309,13 +305,14 @@ const PuzzleScoreboard: React.FC = () => {
       // Award bonus point if solved in 3 or fewer actual moves
       if (actualMoves.length <= 3) {
         bonusPoints.wordleQuick = true;
-        console.log('Quick solve bonus awarded');
+        gameScores.wordle++; // Add bonus point to wordle score
+        console.log('Quick solve bonus awarded, wordle score increased to 2');
       }
 
       console.log('Wordle final:', {
-        base: gameScores.wordle,
+        base: 1,
         bonus: bonusPoints.wordleQuick,
-        total: gameScores.wordle + (bonusPoints.wordleQuick ? 1 : 0)
+        total: gameScores.wordle
       });
     }
 
