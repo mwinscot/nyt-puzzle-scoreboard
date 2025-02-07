@@ -298,27 +298,22 @@ const PuzzleScoreboard: React.FC = () => {
     const puzzleText = sections.find(s => s.includes('Puzzle #'));
     if (puzzleText) {
       const allLines = puzzleText.split('\n');
+      // Filter only the emoji moves, excluding any header text
       const moves = allLines
-        .filter(line => line.includes('🟪') || line.includes('🟩') || 
-                       line.includes('🟨') || line.includes('🟦'))
+        .filter(line => line.trim().match(/^[🟪🟩🟨🟦]{4}$/))
         .map(line => line.trim());
       
       console.log('Connection moves found:', {
         allLines,
-        filteredMoves: moves,
-        movesLength: moves.length
+        validMoves: moves,
+        moveCount: moves.length
       });
-      
-      // Check for valid completion and errors
+
+      // Simplified scoring logic
       const completed = moves.length === 4;
-      // Count as error only if a line has mixed colors
-      const hasErrors = moves.some(line => {
-        const firstEmoji = line[0];
-        const allSameColor = [...line].every(emoji => emoji === firstEmoji);
-        return !allSameColor;
-      });
-      const purpleFirst = moves.length > 0 && moves[0] === '🟪🟪🟪🟪';
-      
+      const hasErrors = false; // Changed since rows with all same color are valid
+      const purpleFirst = moves[0] === '🟪🟪🟪🟪';
+
       console.log('Connections analysis:', {
         moves,
         hasErrors,
@@ -328,18 +323,17 @@ const PuzzleScoreboard: React.FC = () => {
       });
 
       if (completed) {
-        if (purpleFirst && !hasErrors) {
-          gameScores.connections = 3; // Purple first and no errors
+        if (purpleFirst) {
+          gameScores.connections = 3;
           bonusPoints.connectionsPerfect = true;
-        } else if (!hasErrors) {
-          gameScores.connections = 2; // No errors but purple not first
-        } else if (purpleFirst) {
-          gameScores.connections = 2; // Purple first but with errors
+          console.log('Purple first, no errors: 3 points');
         } else {
-          gameScores.connections = 1; // Completed with errors
+          gameScores.connections = 2;
+          console.log('Completed perfectly but purple not first: 2 points');
         }
-        console.log('Connections final score:', gameScores.connections);
       }
+
+      console.log('Final Connections score:', gameScores.connections);
     }
 
     // Fixed Strands scoring with yellow circle detection
