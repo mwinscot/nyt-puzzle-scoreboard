@@ -294,32 +294,32 @@ const PuzzleScoreboard: React.FC = () => {
       console.log('Wordle:', { base: gameScores.wordle, bonus: bonusPoints.wordleQuick });
     }
 
-    // Improved Connections scoring logic
+    // Fixed Connections scoring logic
     const puzzleText = sections.find(s => s.includes('Puzzle #'));
     if (puzzleText) {
       const moves = puzzleText
         .split('\n')
-        .filter(line => /[🟪🟩🟨🟦]{4}/.test(line.trim()));
+        .filter(line => line.trim().match(/^[🟪🟩🟨🟦]{4}$/));
       
       console.log('Raw Connection moves:', moves);
+
+      // Reset conditions check
+      const hasErrors = moves.some(line => line.includes('🟨'));
+      const completed = moves.length > 0;
+      const purpleMove = moves.find(line => line === '🟪🟪🟪🟪');
+      const purpleFirst = purpleMove && moves.indexOf(purpleMove) === 0;
       
-      // More precise conditions checking
-      const validMoves = moves.filter(line => /^[🟪🟩🟨🟦]{4}$/.test(line.trim()));
-      const hasErrors = validMoves.some(line => line.includes('🟨'));
-      const completed = validMoves.some(line => line.includes('🟩🟩🟩🟩'));
-      const purpleMove = validMoves.find(line => line === '🟪🟪🟪🟪');
-      const purpleFirst = purpleMove && validMoves[0] === purpleMove;
-      
-      console.log('Connections analysis:', {
-        validMoves,
+      console.log('Connections detailed analysis:', {
+        moves,
         hasErrors,
         completed,
         purpleMove,
         purpleFirst,
-        firstMove: validMoves[0],
-        moveCount: validMoves.length
+        firstMove: moves[0],
+        moveCount: moves.length
       });
 
+      // Fixed scoring logic
       if (completed) {
         if (purpleFirst && !hasErrors) {
           gameScores.connections = 3;
@@ -337,7 +337,12 @@ const PuzzleScoreboard: React.FC = () => {
         }
       }
 
-      console.log('Final Connections score:', gameScores.connections);
+      console.log('Final Connections score:', {
+        score: gameScores.connections,
+        hasErrors,
+        purpleFirst,
+        completed
+      });
     }
 
     // Fix Strands scoring to include bonus in gameScores
