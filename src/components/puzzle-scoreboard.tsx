@@ -281,17 +281,42 @@ const PuzzleScoreboard: React.FC = () => {
     const sections = input.split(/\n(?=[A-Za-z])/);
     console.log('Sections:', sections);
 
-    // Parse Wordle (no changes needed)
+    // Fixed Wordle scoring logic
     const wordleSection = sections.find(s => s.startsWith('Wordle'));
     if (wordleSection) {
       gameScores.wordle = 1; // Base point for completing
-      const lines = wordleSection.split('\n');
-      const solutionLine = lines.findIndex(line => line.includes('🟩🟩🟩🟩🟩'));
       
-      if (solutionLine <= 2) { // Within first 3 lines (0-based index)
+      // Split lines and remove empty ones
+      const lines = wordleSection.split('\n')
+        .map(line => line.trim())
+        .filter(Boolean);
+      
+      console.log('Wordle lines:', lines);
+      
+      // Find the line with the solution (all green squares)
+      const solutionLine = lines.findIndex(line => /🟩{5}/.test(line));
+      
+      // Count actual moves (lines with squares)
+      const actualMoves = lines.filter(line => /[🟩🟨⬜]/g.test(line));
+      
+      console.log('Wordle analysis:', {
+        lines,
+        solutionLine,
+        actualMoves,
+        moveCount: actualMoves.length
+      });
+
+      // Award bonus point if solved in 3 or fewer actual moves
+      if (actualMoves.length <= 3) {
         bonusPoints.wordleQuick = true;
+        console.log('Quick solve bonus awarded');
       }
-      console.log('Wordle:', { base: gameScores.wordle, bonus: bonusPoints.wordleQuick });
+
+      console.log('Wordle final:', {
+        base: gameScores.wordle,
+        bonus: bonusPoints.wordleQuick,
+        total: gameScores.wordle + (bonusPoints.wordleQuick ? 1 : 0)
+      });
     }
 
     // Fixed Connections scoring logic
