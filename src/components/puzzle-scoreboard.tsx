@@ -89,6 +89,7 @@ const PuzzleScoreboard: React.FC = () => {
     player3: initialPlayerData(),
     player4: initialPlayerData()
   });
+  const [placeholderText, setPlaceholderText] = useState<string>('');
  
   const { start } = getMonthDateRange();
  
@@ -256,11 +257,23 @@ const PuzzleScoreboard: React.FC = () => {
   };
  
   const calculateScores = (input: string): ScoreCalculationResult => {
-    console.log('Raw input:', input); // Debug log
-    
-    // Clean the input - remove extra whitespace and split on any whitespace
+    // Add a note about the expected format in the placeholder
+    const placeholder = `Enter scores in format:
+W1 - Wordle score (1 point)
+C2 - Connections score (1-3 points)
+S1 - Strands score (1 point)
+BW - Wordle bonus (quick solve)
+BC - Connections bonus (perfect)
+BS - Strands bonus (spanagram)
+
+Example: W1 C2 S1 BW BC`;
+
+    setPlaceholderText(placeholder);
+
+    // Add instructions to UI to help with manual score entry
+    console.log('Raw input:', input);
     const parts = input.toUpperCase().trim().split(/\s+/);
-    console.log('Parsed parts:', parts); // Debug log
+    console.log('Processing parts:', parts);
     
     let score = 0;
     const gameScores: GameScores = {
@@ -274,30 +287,23 @@ const PuzzleScoreboard: React.FC = () => {
       strandsSpanagram: false
     };
 
+    // Manual score entry parsing
     parts.forEach(part => {
-      console.log('Processing part:', part); // Debug log
-      
       if (part.startsWith('W')) {
-        const value = parseInt(part.slice(1));
-        if (!isNaN(value)) {
-          gameScores.wordle = value;
-          score += value;
-          console.log('Added Wordle score:', value);
-        }
+        const value = parseInt(part.slice(1)) || 0;
+        gameScores.wordle = value;
+        score += value;
+        console.log('Wordle score:', value);
       } else if (part.startsWith('C')) {
-        const value = parseInt(part.slice(1));
-        if (!isNaN(value)) {
-          gameScores.connections = value;
-          score += value;
-          console.log('Added Connections score:', value);
-        }
+        const value = parseInt(part.slice(1)) || 0;
+        gameScores.connections = value;
+        score += value;
+        console.log('Connections score:', value);
       } else if (part.startsWith('S')) {
-        const value = parseInt(part.slice(1));
-        if (!isNaN(value)) {
-          gameScores.strands = value;
-          score += value;
-          console.log('Added Strands score:', value);
-        }
+        const value = parseInt(part.slice(1)) || 0;
+        gameScores.strands = value;
+        score += value;
+        console.log('Strands score:', value);
       } else if (part === 'BW') {
         bonusPoints.wordleQuick = true;
         score += 1;
@@ -314,7 +320,7 @@ const PuzzleScoreboard: React.FC = () => {
     });
 
     const result = { score, bonusPoints, gameScores };
-    console.log('Final calculated result:', result); // Debug log
+    console.log('Final calculated result:', result);
     return result;
   };
 
@@ -439,7 +445,7 @@ const PuzzleScoreboard: React.FC = () => {
                   value={inputText}
                   onChange={(e) => setInputText(e.target.value)}
                   className="flex-1 p-2 border rounded min-h-[100px] font-mono"
-                  placeholder="Paste puzzle results here..."
+                  placeholder={placeholderText}
                   disabled={!currentEntry}
                 />
                 <button
