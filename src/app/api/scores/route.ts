@@ -55,12 +55,16 @@ export async function GET(request: Request) {
 
   const [year, monthNum] = month.split('-').map(Number);
   const lastDay = new Date(year, monthNum, 0).getDate();
+  
+  // Adjust dates to PST
+  const startDate = new Date(`${month}-01T00:00:00-08:00`);
+  const endDate = new Date(`${month}-${String(lastDay).padStart(2, '0')}T23:59:59-08:00`);
 
   const { data, error } = await supabase
     .from('daily_scores')
     .select('*, players (name)')
-    .gte('date', `${month}-01`)
-    .lte('date', `${month}-${String(lastDay).padStart(2, '0')}`);
+    .gte('date', startDate.toISOString().split('T')[0])
+    .lte('date', endDate.toISOString().split('T')[0]);
 
   if (error) {
     console.error('Supabase error:', error);

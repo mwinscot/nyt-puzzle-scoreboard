@@ -64,6 +64,16 @@ const getPlayerKeyFromName = (name: PlayerName): PlayerKey => {
  }
 };
 
+interface LastUpdate {
+  date: string;
+  score: number;
+  displayDate: Date;
+}
+
+interface Updates {
+  [key: string]: LastUpdate;
+}
+
 const PuzzleScoreboard: React.FC = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [player1Name] = useState<string>('Keith');
@@ -297,12 +307,12 @@ const PuzzleScoreboard: React.FC = () => {
     setCurrentEntry(player);
   };
 
-  const getLastUpdates = () => {
-    const updates = {
-      Keith: { date: '', score: 0 },
-      Mike: { date: '', score: 0 },
-      Colleen: { date: '', score: 0 },
-      Toby: { date: '', score: 0 }
+  const getLastUpdates = (): Updates => {
+    const updates: Updates = {
+      Keith: { date: '', score: 0, displayDate: new Date() },
+      Mike: { date: '', score: 0, displayDate: new Date() },
+      Colleen: { date: '', score: 0, displayDate: new Date() },
+      Toby: { date: '', score: 0, displayDate: new Date() }
     };
 
     Object.entries(scores).forEach(([playerKey, playerData]) => {
@@ -316,7 +326,8 @@ const PuzzleScoreboard: React.FC = () => {
         
         updates[playerName] = {
           date: lastDate,
-          score: playerData.dailyScores[lastDate].total
+          score: playerData.dailyScores[lastDate].total,
+          displayDate: new Date(lastDate + 'T00:00:00-08:00')
         };
       }
     });
@@ -345,7 +356,13 @@ const PuzzleScoreboard: React.FC = () => {
                     <div className="font-medium text-gray-900">{name}</div>
                     {data.date ? (
                       <>
-                        <div className="text-gray-600">{new Date(data.date).toLocaleDateString()}</div>
+                        <div className="text-gray-600">
+                          {data.displayDate.toLocaleDateString('en-US', {
+                            timeZone: 'America/Los_Angeles',
+                            month: 'numeric',
+                            day: 'numeric'
+                          })}
+                        </div>
                         <div className="text-gray-800">Score: {data.score}</div>
                       </>
                     ) : (
