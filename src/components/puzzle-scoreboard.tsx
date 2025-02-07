@@ -332,19 +332,15 @@ const PuzzleScoreboard: React.FC = () => {
       console.log('Final Connections score:', gameScores.connections);
     }
 
-    // Parse Strands with fixed scoring
+    // Fix Strands scoring to include bonus in gameScores
     const strandsSection = sections.find(s => s.startsWith('Strands'));
     if (strandsSection) {
-      // Base score for completion
-      gameScores.strands = 1;
+      gameScores.strands = 1; // Base score
       
       const lines = strandsSection.split('\n')
-        .slice(2) // Skip title and puzzle name
+        .slice(2)
         .map(line => line.trim());
       
-      console.log('Strands moves:', lines);
-      
-      // Check for spanagram (3+ blue circles) in first three moves
       const spanagramIndex = lines.findIndex(line => (line.match(/🔵/g) || []).length >= 3);
       const spanagramInFirstThree = spanagramIndex !== -1 && spanagramIndex < 3;
       
@@ -357,18 +353,19 @@ const PuzzleScoreboard: React.FC = () => {
 
       if (spanagramInFirstThree) {
         bonusPoints.strandsSpanagram = true;
+        gameScores.strands = 2; // Include bonus in game score
       }
 
       console.log('Strands final:', {
-        baseScore: gameScores.strands,
-        bonus: bonusPoints.strandsSpanagram
+        baseScore: 1,
+        bonus: bonusPoints.strandsSpanagram,
+        totalScore: gameScores.strands
       });
     }
 
     // Calculate total score
     const baseScore = gameScores.wordle + gameScores.connections + gameScores.strands;
-    const bonusCount = (bonusPoints.wordleQuick ? 1 : 0) + 
-                      (bonusPoints.strandsSpanagram ? 1 : 0);
+    const bonusCount = (bonusPoints.wordleQuick ? 1 : 0); // Remove Strands bonus from here since it's in gameScores
     const totalScore = baseScore + bonusCount;
 
     console.log('Final score calculation:', {
@@ -380,17 +377,12 @@ const PuzzleScoreboard: React.FC = () => {
       },
       bonuses: {
         wordle: bonusPoints.wordleQuick ? 1 : 0,
-        strands: bonusPoints.strandsSpanagram ? 1 : 0,
-        bonusTotal: bonusCount
+        strands: bonusPoints.strandsSpanagram
       },
       totalScore
     });
 
-    return { 
-      score: totalScore,
-      bonusPoints,
-      gameScores
-    };
+    return { score: totalScore, bonusPoints, gameScores };
   };
 
   const finalizeDayScores = async () => {
