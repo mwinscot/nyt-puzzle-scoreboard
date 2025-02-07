@@ -325,12 +325,11 @@ const PuzzleScoreboard: React.FC = () => {
                 ))}
               </div>
               <div className="flex gap-2">
-                <input
-                  type="text"
+                <textarea
                   value={inputText}
                   onChange={(e) => setInputText(e.target.value)}
-                  className="flex-1 p-2 border rounded"
-                  placeholder="Enter scores..."
+                  className="flex-1 p-2 border rounded min-h-[100px] font-mono"
+                  placeholder="Paste puzzle results here..."
                   disabled={!currentEntry}
                 />
                 <button
