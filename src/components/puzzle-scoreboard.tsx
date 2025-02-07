@@ -369,26 +369,31 @@ const PuzzleScoreboard: React.FC = () => {
 
     // Calculate total score
     const baseScore = gameScores.wordle + gameScores.connections + gameScores.strands;
-    const bonusScore = (bonusPoints.wordleQuick ? 1 : 0) + 
+    const bonusCount = (bonusPoints.wordleQuick ? 1 : 0) + 
                       (bonusPoints.strandsSpanagram ? 1 : 0);
-    const totalScore = baseScore + bonusScore;
+    const totalScore = baseScore + bonusCount;
 
-    console.log('Final score breakdown:', {
-      wordle: {
-        base: gameScores.wordle,
-        bonus: bonusPoints.wordleQuick,
-        total: gameScores.wordle + (bonusPoints.wordleQuick ? 1 : 0)
+    console.log('Final score calculation:', {
+      baseComponents: {
+        wordle: gameScores.wordle,
+        connections: gameScores.connections,
+        strands: gameScores.strands,
+        baseTotal: baseScore
       },
-      connections: gameScores.connections,
-      strands: {
-        base: 1,
-        bonus: bonusPoints.strandsSpanagram,
-        total: gameScores.strands
+      bonuses: {
+        wordle: bonusPoints.wordleQuick ? 1 : 0,
+        connections: bonusPoints.connectionsPerfect ? 1 : 0,
+        strands: bonusPoints.strandsSpanagram ? 1 : 0,
+        bonusTotal: bonusCount
       },
-      finalTotal: totalScore
+      total: totalScore
     });
 
-    return { score: totalScore, bonusPoints, gameScores };
+    return { 
+      score: totalScore,
+      bonusPoints,
+      gameScores
+    };
   };
 
   const finalizeDayScores = async () => {
