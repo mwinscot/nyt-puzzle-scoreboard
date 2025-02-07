@@ -2,79 +2,28 @@ import { TotalScoreHeader } from '@/components/TotalScoreHeader';
 import ScoreCharts from '@/components/ScoreCharts';
 import { PlayerScores } from '@/types';
 import Link from 'next/link';
-import { createClient } from '@supabase/supabase-js';
+import { headers } from 'next/headers';
 
-// Initialize the Supabase client
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
-
-// Force dynamic rendering to avoid static build issues
 export const dynamic = 'force-dynamic';
-export const fetchCache = 'force-no-store';
 
-// Helper function to initialize scores
-function initScores(): PlayerScores {
-  const emptyPlayerData = {
-    dailyScores: {},
-    total: 0,
-    totalBonuses: { wordle: 0, connections: 0, strands: 0 }
-  };
-  
-  return {
-    player1: { ...emptyPlayerData },
-    player2: { ...emptyPlayerData },
-    player3: { ...emptyPlayerData },
-    player4: { ...emptyPlayerData }
-  };
-}
+async function getArchiveData(month: string): Promise<PlayerScores> {
+  const headersList = headers();
+  const protocol = headersList.get('x-forwarded-proto') || 'http';
+  const host = headersList.get('host');
 
-// Main page component
-export default async function Page({ params }: { params: { month: string } }) {
-  const scores = initScores();
-  
-  try {
-    const [year, month] = params.month.split('-').map(Number);
-    const lastDay = new Date(year, month, 0).getDate();
-    
-    const { data } = await supabase
-      .from('daily_scores')
-      .select('*, players (name)')
-      .gte('date', `${params.month}-01`)
-      .lte('date', `${params.month}-${String(lastDay).padStart(2, '0')}`);
+  const res = await fetch(`${protocol}://${host}/api/scores?month=${month}`, {
+    cache: 'no-store'
+  });
 
-    if (data) {
-      data.forEach(score => {
-        const playerKey = score.players.name === 'Keith' ? 'player1'
-          : score.players.name === 'Mike' ? 'player2'
-          : score.players.name === 'Colleen' ? 'player3'
-          : 'player4';
-
-        scores[playerKey].dailyScores[score.date] = {
-          date: score.date,
-          wordle: score.wordle || 0,
-          connections: score.connections || 0,
-          strands: score.strands || 0,
-          total: score.total || 0,
-          bonusPoints: {
-            wordleQuick: Boolean(score.bonus_wordle),
-            connectionsPerfect: Boolean(score.bonus_connections),
-            strandsSpanagram: Boolean(score.bonus_strands)
-          },
-          finalized: Boolean(score.finalized)
-        };
-
-        scores[playerKey].total += score.total || 0;
-        if (score.bonus_wordle) scores[playerKey].totalBonuses.wordle++;
-        if (score.bonus_connections) scores[playerKey].totalBonuses.connections++;
-        if (score.bonus_strands) scores[playerKey].totalBonuses.strands++;
-      });
-    }
-  } catch (error) {
-    console.error('Error fetching data:', error);
+  if (!res.ok) {
+    throw new Error('Failed to fetch archive data');
   }
 
+  return res.json();
+}
+
+export default async function Page({ params }: { params: { month: string } }) {
+  const scores = await getArchiveData(params.month);
   const monthDate = new Date(`${params.month}-01`);
   const monthName = monthDate.toLocaleString('default', { month: 'long', year: 'numeric' });
 

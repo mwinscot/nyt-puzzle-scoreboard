@@ -28,46 +28,45 @@ const initialPlayerData = (): PlayerData => ({
   totalBonuses: { wordle: 0, connections: 0, strands: 0 }
 });
 
+function initScores(): PlayerScores {
+  const emptyPlayerData = {
+    dailyScores: {},
+    total: 0,
+    totalBonuses: { wordle: 0, connections: 0, strands: 0 }
+  };
+  
+  return {
+    player1: { ...emptyPlayerData },
+    player2: { ...emptyPlayerData },
+    player3: { ...emptyPlayerData },
+    player4: { ...emptyPlayerData }
+  };
+}
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const month = searchParams.get('month');
 
   if (!month || !/^\d{4}-\d{2}$/.test(month)) {
-    return NextResponse.json({ error: 'Invalid month format' }, { status: 400 });
+    return NextResponse.json({ error: 'Invalid month' }, { status: 400 });
   }
 
   const [year, monthNum] = month.split('-').map(Number);
   const lastDay = new Date(year, monthNum, 0).getDate();
-  const startDate = `${month}-01`;
-  const endDate = `${month}-${String(lastDay).padStart(2, '0')}`;
 
-  const { data: scoresData, error } = await supabase
+  const { data } = await supabase
     .from('daily_scores')
-    .select(`*, players (name)`)
-    .gte('date', startDate)
-    .lte('date', endDate);
+    .select('*, players (name)')
+    .gte('date', `${month}-01`)
+    .lte('date', `${month}-${String(lastDay).padStart(2, '0')}`);
 
-  if (error) {
-    return NextResponse.json({ error: 'Database error' }, { status: 500 });
-  }
+  const scores = initScores();
 
-  const scores: PlayerScores = {
-    player1: initialPlayerData(),
-    player2: initialPlayerData(),
-    player3: initialPlayerData(),
-    player4: initialPlayerData()
-  };
-
-  const playerMap: Record<PlayerName, keyof PlayerScores> = {
-    'Keith': 'player1',
-    'Mike': 'player2',
-    'Colleen': 'player3',
-    'Toby': 'player4'
-  };
-
-  (scoresData as ScoreRecord[])?.forEach((score) => {
-    const playerKey = playerMap[score.players.name];
-    if (!playerKey) return;
+  data?.forEach(score => {
+    const playerKey = score.players.name === 'Keith' ? 'player1'
+      : score.players.name === 'Mike' ? 'player2'
+      : score.players.name === 'Colleen' ? 'player3'
+      : 'player4';
 
     scores[playerKey].dailyScores[score.date] = {
       date: score.date,
@@ -84,6 +83,9 @@ export async function GET(request: Request) {
     };
 
     scores[playerKey].total += score.total || 0;
+    if (score.bonus_wordle) scores[playerKey].totalBonuses.wordle++;
+    if (score.bonus_connections) scores[playerKey].totalBonuses.connections++;
+    if (score.bonus_strands) scores[playerKey].totalBonuses.strands++;
   });
 
   return NextResponse.json(scores);
