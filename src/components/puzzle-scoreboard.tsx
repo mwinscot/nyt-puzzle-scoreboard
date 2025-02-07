@@ -392,20 +392,18 @@ const PuzzleScoreboard: React.FC = () => {
       });
     }
 
-    // Calculate total score
-    const baseScore = gameScores.wordle + gameScores.connections + gameScores.strands;
-    const bonusCount = (bonusPoints.wordleQuick ? 1 : 0); // Remove Strands bonus from here since it's in gameScores
-    const totalScore = baseScore + bonusCount;
-
+    // Fixed total score calculation - remove the extra bonus count since it's already in gameScores
+    const totalScore = gameScores.wordle + gameScores.connections + gameScores.strands;
+    
     console.log('Final score calculation:', {
       baseComponents: {
-        wordle: gameScores.wordle,
+        wordle: gameScores.wordle,      // Already includes bonus
         connections: gameScores.connections,
         strands: gameScores.strands,
-        baseTotal: baseScore
+        baseTotal: totalScore
       },
       bonuses: {
-        wordle: bonusPoints.wordleQuick ? 1 : 0,
+        wordle: bonusPoints.wordleQuick,
         strands: bonusPoints.strandsSpanagram
       },
       totalScore
