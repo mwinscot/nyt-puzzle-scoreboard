@@ -259,7 +259,6 @@ const PuzzleScoreboard: React.FC = () => {
   const calculateScores = (input: string): ScoreCalculationResult => {
     console.log('Raw input:', input);
     
-    let totalScore = 0;
     const gameScores: GameScores = {
       wordle: 0,
       connections: 0,
@@ -271,25 +270,21 @@ const PuzzleScoreboard: React.FC = () => {
       strandsSpanagram: false
     };
 
-    // Split into sections and clean up the input
+    // Split into sections
     const sections = input.split(/\n(?=[A-Za-z])/);
     console.log('Sections:', sections);
 
-    // Parse Wordle (1 point for completion)
+    // Parse Wordle
     const wordleSection = sections.find(s => s.startsWith('Wordle'));
     if (wordleSection) {
+      gameScores.wordle = 1; // Base point for completing
       const lines = wordleSection.split('\n');
       const solutionLine = lines.findIndex(line => line.includes('🟩🟩🟩🟩🟩'));
       
-      if (solutionLine !== -1) {
-        gameScores.wordle = 1; // Base point for completing
-        console.log('Added base Wordle point');
-
-        if (solutionLine <= 2) { // Index 2 = line 3
-          bonusPoints.wordleQuick = true;
-          console.log('Added Wordle bonus point');
-        }
+      if (solutionLine <= 2) { // Within first 3 lines (0-based index)
+        bonusPoints.wordleQuick = true;
       }
+      console.log('Wordle:', { base: gameScores.wordle, bonus: bonusPoints.wordleQuick });
     }
 
     // Parse Connections
@@ -299,62 +294,51 @@ const PuzzleScoreboard: React.FC = () => {
       const moves = lines.filter(line => /[🟪🟩🟨🟦]{4}/.test(line));
       const purpleIndex = moves.findIndex(line => line.includes('🟪🟪🟪🟪'));
       const hasErrors = moves.some(line => line.includes('🟨'));
+      const completed = moves.some(line => line.includes('🟩🟩🟩🟩'));
 
-      if (moves.length > 0) { // If there are any moves
+      if (completed) {
         if (!hasErrors) {
-          if (purpleIndex === 0) {
-            gameScores.connections = 3; // Purple first and perfect
-            console.log('Added 3 points for perfect Connections with purple first');
-          } else {
-            gameScores.connections = 2; // Perfect but purple not first
-            console.log('Added 2 points for perfect Connections');
-          }
+          gameScores.connections = purpleIndex === 0 ? 3 : 2;
         } else {
-          if (purpleIndex === 0) {
-            gameScores.connections = 2; // Purple first but with errors
-            console.log('Added 2 points for Connections with purple first but errors');
-          } else {
-            gameScores.connections = 1; // Completed with errors
-            console.log('Added 1 point for completing Connections with errors');
-          }
+          gameScores.connections = purpleIndex === 0 ? 2 : 1;
         }
       }
+      console.log('Connections:', { score: gameScores.connections, purpleFirst: purpleIndex === 0, hasErrors });
     }
 
     // Parse Strands
     const strandsSection = sections.find(s => s.startsWith('Strands'));
     if (strandsSection) {
+      gameScores.strands = 1; // Base point for completing
       const lines = strandsSection.split('\n').slice(2); // Skip title and puzzle name
-      const blueCircles = lines.map(line => (line.match(/🔵/g) || []).length);
+      const spanagramFound = lines.some(line => (line.match(/🔵/g) || []).length >= 3);
       
-      if (blueCircles.some(count => count > 0)) {
-        gameScores.strands = 1;
-        console.log('Added base Strands point');
-        
-        // Check for spanagram (3+ blue circles) in first three moves
-        const spanagramIndex = blueCircles.findIndex(count => count >= 3);
-        if (spanagramIndex !== -1 && spanagramIndex < 3) {
-          bonusPoints.strandsSpanagram = true;
-          console.log('Added Strands bonus point');
-        }
+      if (spanagramFound && lines.length <= 3) {
+        bonusPoints.strandsSpanagram = true;
       }
+      console.log('Strands:', { base: gameScores.strands, bonus: bonusPoints.strandsSpanagram });
     }
 
     // Calculate total score
-    totalScore = gameScores.wordle + gameScores.connections + gameScores.strands +
-                (bonusPoints.wordleQuick ? 1 : 0) +
-                (bonusPoints.strandsSpanagram ? 1 : 0);
+    const baseScore = gameScores.wordle + gameScores.connections + gameScores.strands;
+    const bonusScore = (bonusPoints.wordleQuick ? 1 : 0) + 
+                      (bonusPoints.strandsSpanagram ? 1 : 0);
+    const totalScore = baseScore + bonusScore;
 
-    const result = { score: totalScore, bonusPoints, gameScores };
-    
     console.log('Score breakdown:', {
-      wordle: `${gameScores.wordle} + ${bonusPoints.wordleQuick ? '1' : '0'} bonus`,
+      wordle: `${gameScores.wordle} ${bonusPoints.wordleQuick ? '+ 1 bonus' : ''}`,
       connections: gameScores.connections,
-      strands: `${gameScores.strands} + ${bonusPoints.strandsSpanagram ? '1' : '0'} bonus`,
-      total: totalScore
+      strands: `${gameScores.strands} ${bonusPoints.strandsSpanagram ? '+ 1 bonus' : ''}`,
+      baseTotal: baseScore,
+      bonusTotal: bonusScore,
+      finalTotal: totalScore
     });
 
-    return result;
+    return { 
+      score: totalScore,
+      bonusPoints,
+      gameScores
+    };
   };
 
   const finalizeDayScores = async () => {
@@ -410,14 +394,13 @@ const PuzzleScoreboard: React.FC = () => {
     <div className="w-full max-w-4xl mx-auto">
       {!isAdmin && <AdminAuth onLogin={() => setIsAdmin(true)} />}
       <div className="p-6">
-        {/* Admin Controls */}
         {isAdmin && (
           <>
             <div className="mb-4 flex justify-end">
               <ArchiveButton onArchiveComplete={fetchAllScores} />
             </div>
 
-            {/* Add Last Updates Section */}
+            {/* Last Updates Section */}
             <div className="mb-6 bg-gray-50 rounded-lg p-4 shadow">
               <h3 className="text-lg font-semibold mb-3 text-gray-700">Last Updates</h3>
               <div className="grid grid-cols-4 gap-4">
@@ -443,6 +426,7 @@ const PuzzleScoreboard: React.FC = () => {
               </div>
             </div>
 
+            {/* Admin Controls */}
             <div className="mb-4 space-y-2">
               {/* Date Selector */}
               <div className="flex gap-2 items-center mb-4">
