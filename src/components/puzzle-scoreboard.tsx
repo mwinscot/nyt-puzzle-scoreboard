@@ -296,7 +296,34 @@ const PuzzleScoreboard: React.FC = () => {
   const handlePlayerSelect = (player: PlayerKey) => {
     setCurrentEntry(player);
   };
- 
+
+  const getLastUpdates = () => {
+    const updates = {
+      Keith: { date: '', score: 0 },
+      Mike: { date: '', score: 0 },
+      Colleen: { date: '', score: 0 },
+      Toby: { date: '', score: 0 }
+    };
+
+    Object.entries(scores).forEach(([playerKey, playerData]) => {
+      const dates = Object.keys(playerData.dailyScores).sort().reverse();
+      if (dates.length > 0) {
+        const lastDate = dates[0];
+        const playerName = playerKey === 'player1' ? 'Keith' 
+          : playerKey === 'player2' ? 'Mike'
+          : playerKey === 'player3' ? 'Colleen'
+          : 'Toby';
+        
+        updates[playerName] = {
+          date: lastDate,
+          score: playerData.dailyScores[lastDate].total
+        };
+      }
+    });
+
+    return updates;
+  };
+
   // Add input handling UI elements
   return (
     <div className="w-full max-w-4xl mx-auto">
@@ -308,6 +335,27 @@ const PuzzleScoreboard: React.FC = () => {
             <div className="mb-4 flex justify-end">
               <ArchiveButton onArchiveComplete={fetchAllScores} />
             </div>
+
+            {/* Add Last Updates Section */}
+            <div className="mb-6 bg-gray-50 rounded-lg p-4 shadow">
+              <h3 className="text-lg font-semibold mb-3 text-gray-700">Last Updates</h3>
+              <div className="grid grid-cols-4 gap-4">
+                {Object.entries(getLastUpdates()).map(([name, data]) => (
+                  <div key={name} className="text-sm">
+                    <div className="font-medium text-gray-900">{name}</div>
+                    {data.date ? (
+                      <>
+                        <div className="text-gray-600">{new Date(data.date).toLocaleDateString()}</div>
+                        <div className="text-gray-800">Score: {data.score}</div>
+                      </>
+                    ) : (
+                      <div className="text-gray-400">No entries yet</div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
             <div className="mb-4 space-y-2">
               <div className="flex gap-2">
                 {['player1', 'player2', 'player3', 'player4'].map((player) => (
