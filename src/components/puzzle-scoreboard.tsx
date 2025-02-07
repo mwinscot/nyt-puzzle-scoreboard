@@ -224,12 +224,13 @@ const PuzzleScoreboard: React.FC = () => {
  
       if (playerError) throw playerError;
 
+      // Ensure each score component is explicitly set
       const scoreData = {
         date: currentDate,
         player_id: player.id,
-        wordle: gameScores.wordle,
-        connections: gameScores.connections,
-        strands: gameScores.strands,
+        wordle: Number(gameScores.wordle) || 0,
+        connections: Number(gameScores.connections) || 0,
+        strands: Number(gameScores.strands) || 0,
         total: score,
         bonus_wordle: bonusPoints.wordleQuick,
         bonus_connections: bonusPoints.connectionsPerfect,
@@ -238,6 +239,12 @@ const PuzzleScoreboard: React.FC = () => {
       };
 
       console.log('Submitting score data:', scoreData);
+      console.log('Score components:', {
+        wordle: scoreData.wordle,
+        connections: scoreData.connections,
+        strands: scoreData.strands,
+        total: scoreData.total
+      });
  
       const { data: result, error: scoreError } = await supabase
         .from('daily_scores')
