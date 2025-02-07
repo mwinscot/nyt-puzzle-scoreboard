@@ -257,23 +257,7 @@ const PuzzleScoreboard: React.FC = () => {
   };
  
   const calculateScores = (input: string): ScoreCalculationResult => {
-    // Add a note about the expected format in the placeholder
-    const placeholder = `Enter scores in format:
-W1 - Wordle score (1 point)
-C2 - Connections score (1-3 points)
-S1 - Strands score (1 point)
-BW - Wordle bonus (quick solve)
-BC - Connections bonus (perfect)
-BS - Strands bonus (spanagram)
-
-Example: W1 C2 S1 BW BC`;
-
-    setPlaceholderText(placeholder);
-
-    // Add instructions to UI to help with manual score entry
     console.log('Raw input:', input);
-    const parts = input.toUpperCase().trim().split(/\s+/);
-    console.log('Processing parts:', parts);
     
     let score = 0;
     const gameScores: GameScores = {
@@ -287,37 +271,60 @@ Example: W1 C2 S1 BW BC`;
       strandsSpanagram: false
     };
 
-    // Manual score entry parsing
-    parts.forEach(part => {
-      if (part.startsWith('W')) {
-        const value = parseInt(part.slice(1)) || 0;
-        gameScores.wordle = value;
-        score += value;
-        console.log('Wordle score:', value);
-      } else if (part.startsWith('C')) {
-        const value = parseInt(part.slice(1)) || 0;
-        gameScores.connections = value;
-        score += value;
-        console.log('Connections score:', value);
-      } else if (part.startsWith('S')) {
-        const value = parseInt(part.slice(1)) || 0;
-        gameScores.strands = value;
-        score += value;
-        console.log('Strands score:', value);
-      } else if (part === 'BW') {
-        bonusPoints.wordleQuick = true;
+    // Parse Wordle
+    if (input.includes('Wordle')) {
+      gameScores.wordle = 1; // Base point for completing
+      score += 1;
+      
+      // Check for quick solve (3 lines or less)
+      const lines = input.split('\n');
+      const greenLines = lines.filter(line => line.includes('🟩🟩🟩🟩🟩'));
+      if (greenLines.length > 0) {
+        const greenLineIndex = lines.indexOf(greenLines[0]);
+        if (greenLineIndex <= 3) { // Within first 3 lines
+          bonusPoints.wordleQuick = true;
+          score += 1;
+        }
+      }
+    }
+
+    // Parse Connections
+    if (input.includes('Connections')) {
+      const connLines = input.split('\n');
+      const purpleLine = connLines.find(line => line.includes('🟪🟪🟪🟪'));
+      const hasErrors = input.includes('🟨') || input.includes('⬛');
+      const purpleFirst = purpleLine && connLines.indexOf(purpleLine) === connLines.findIndex(line => /[🟪🟩🟨🟦]/.test(line));
+      
+      if (!hasErrors) {
+        gameScores.connections = 2;
+        score += 2;
+        if (purpleFirst) {
+          gameScores.connections = 3;
+          score += 1;
+        }
+      } else {
+        gameScores.connections = 1;
         score += 1;
-        console.log('Added Wordle bonus');
-      } else if (part === 'BC') {
-        bonusPoints.connectionsPerfect = true;
-        score += 1;
-        console.log('Added Connections bonus');
-      } else if (part === 'BS') {
+        if (purpleFirst) {
+          gameScores.connections = 2;
+          score += 1;
+        }
+      }
+    }
+
+    // Parse Strands
+    if (input.includes('Strands')) {
+      gameScores.strands = 1;
+      score += 1;
+      
+      // Check for quick spanagram (within first 3 moves)
+      const strandsLines = input.split('\n');
+      const spanagramIndex = strandsLines.findIndex(line => /🔵{3,}/.test(line));
+      if (spanagramIndex !== -1 && spanagramIndex <= 3) {
         bonusPoints.strandsSpanagram = true;
         score += 1;
-        console.log('Added Strands bonus');
       }
-    });
+    }
 
     const result = { score, bonusPoints, gameScores };
     console.log('Final calculated result:', result);
