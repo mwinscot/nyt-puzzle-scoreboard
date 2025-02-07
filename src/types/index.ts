@@ -58,3 +58,20 @@ export interface ScoreRecord {
     name: string;
   };
 }
+
+export interface GameScores {
+  wordle: number;
+  connections: number;
+  strands: number;
+}
+
+export interface ScoreCardProps {
+  playerName: string;
+  score: PlayerData;
+}
+
+export interface ScoreCalculationResult {
+  score: number;
+  bonusPoints: DailyBonusPoints;
+  gameScores: GameScores;
+}

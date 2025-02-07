@@ -1,40 +1,40 @@
 // src/components/ScoreCard.tsx
 import React from 'react';
 import { Star } from 'lucide-react';
+import { PlayerData } from '@/types';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 
 interface ScoreCardProps {
-  title: string;
-  score: number;
-  icon: React.ElementType;
-  bonusCount?: number;
-  playerName?: string;
+  playerName: string;
+  score: PlayerData;
 }
 
-export const ScoreCard: React.FC<ScoreCardProps> = ({ 
-  title, 
-  score, 
-  icon: Icon, 
-  bonusCount,
-  playerName 
-}) => (
-  <div className="flex flex-col p-4 bg-gray-100 rounded-lg">
-    {playerName && (
-      <div className="text-lg font-semibold text-gray-900 mb-2">{playerName}</div>
-    )}
-    <div className="flex items-center space-x-2">
-      <Icon className="w-6 h-6 text-blue-600" />
-      <div className="flex-1">
-        <div className="text-sm text-gray-800">{title}</div>
-        <div className="text-xl font-bold text-gray-900">{score}</div>
-      </div>
-      {bonusCount !== undefined && bonusCount > 0 && (
-        <div className="flex items-center text-yellow-600">
-          <Star className="w-4 h-4" />
-          <span className="ml-1 text-gray-900">{bonusCount}</span>
+export const ScoreCard: React.FC<ScoreCardProps> = ({ playerName, score }) => (
+  <Card>
+    <CardHeader>
+      <CardTitle>{playerName}</CardTitle>
+    </CardHeader>
+    <CardContent>
+      <div className="space-y-2">
+        <div className="flex justify-between">
+          <span>Total Score:</span>
+          <span className="font-bold">{score.total}</span>
         </div>
-      )}
-    </div>
-  </div>
+        <div className="flex justify-between">
+          <span>Bonus Points:</span>
+          <div className="flex items-center">
+            <Star className="w-4 h-4 text-yellow-500 mr-1" />
+            <span>{score.totalBonuses.wordle + score.totalBonuses.connections + score.totalBonuses.strands}</span>
+          </div>
+        </div>
+      </div>
+    </CardContent>
+  </Card>
 );
 
 export type { ScoreCardProps };

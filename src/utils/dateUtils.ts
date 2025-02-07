@@ -13,3 +13,11 @@ export const convertToPST = (dateStr: string): string => {
   const date = new Date(dateStr);
   return date.toISOString().split('T')[0];
 };
+
+export const getMonthDateRange = () => {
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth(), 1)
+    .toISOString()
+    .split('T')[0];
+  return { start };
+};

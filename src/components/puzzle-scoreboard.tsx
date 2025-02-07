@@ -1,13 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import Link from 'next/link';
-import { Trophy, Target, Puzzle, Brain, Star } from 'lucide-react';
 import { supabase, publicSupabase } from '@/lib/supabase';
-import { PlayerScores, PlayerData, PlayerKey, PlayerName, BonusPoints } from '@/types';
+import { PlayerScores, PlayerData, PlayerKey, PlayerName, DailyBonusPoints, GameScores, ScoreCalculationResult } from '@/types';
 import { AdminAuth } from './AdminAuth';
 import ScoreCharts from '@/components/ScoreCharts';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { getMonthDateRange } from '@/utils/dateUtils';
-import { TotalScoreHeader } from '@/components/TotalScoreHeader'; // Corrected import path
 import { ScoreCard } from './ScoreCard';
 import { ArchiveButton } from '@/components/ArchiveButton';
 
@@ -17,10 +13,6 @@ const getCurrentDatePST = (): string => {
    hour12: false,
  });
  return new Date(pstNow).toISOString().split('T')[0];
-};
-
-const handleArchiveComplete = () => {
-  fetchAllScores(); // Re-fetch current scores
 };
 
 interface ScoreRecord {
@@ -65,27 +57,25 @@ const getPlayerKeyFromName = (name: PlayerName): PlayerKey => {
    case 'Keith': return 'player1';
    case 'Mike': return 'player2';
    case 'Colleen': return 'player3';
+   case 'Toby': return 'player4';
    default: throw new Error('Invalid player name');
  }
 };
-
-interface ScoreCardProps {
-  playerName: string;
-  scores: PlayerData;
-}
 
 const PuzzleScoreboard: React.FC = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [player1Name] = useState<string>('Keith');
   const [player2Name] = useState<string>('Mike');
   const [player3Name] = useState<string>('Colleen');
+  const [player4Name] = useState<string>('Toby');
   const [inputText, setInputText] = useState<string>('');
   const [currentEntry, setCurrentEntry] = useState<PlayerKey | null>(null);
   const [currentDate, setCurrentDate] = useState<string>(getCurrentDatePST());
   const [scores, setScores] = useState<PlayerScores>({
     player1: initialPlayerData(),
     player2: initialPlayerData(),
-    player3: initialPlayerData()
+    player3: initialPlayerData(),
+    player4: initialPlayerData()
   });
  
   const { start } = getMonthDateRange();
@@ -149,20 +139,22 @@ const PuzzleScoreboard: React.FC = () => {
     return () => subscription.unsubscribe();
   }, []);
  
-  const fetchAllScores = async () => {
+  // Make fetchAllScores a named function declaration instead of const
+  async function fetchAllScores() {
     try {
       const { data: scoresData, error } = await publicSupabase
         .from('daily_scores')
         .select(`*, players (name)`)
-        .gte('date', start);
-        .eq('archived', false); // Only fetch non-archived scores
- 
+        .gte('date', start)
+        .eq('archived', false);
+
       if (error) throw error;
  
       const newScores: PlayerScores = {
         player1: initialPlayerData(),
         player2: initialPlayerData(),
-        player3: initialPlayerData()
+        player3: initialPlayerData(),
+        player4: initialPlayerData()
       };
  
       scoresData?.forEach((score: ScoreRecord) => {
@@ -192,6 +184,10 @@ const PuzzleScoreboard: React.FC = () => {
     } catch (error) {
       console.error('Error fetching scores:', error);
     }
+  }
+
+  const handleArchiveComplete = () => {
+    fetchAllScores(); // Now fetchAllScores is in scope
   };
  
   const handleSubmit = async () => {
@@ -201,7 +197,8 @@ const PuzzleScoreboard: React.FC = () => {
       const { score, bonusPoints, gameScores } = calculateScores(inputText);
       
       const playerName = currentEntry === 'player1' ? 'Keith' : 
-                        currentEntry === 'player2' ? 'Mike' : 'Colleen';
+                        currentEntry === 'player2' ? 'Mike' : 
+                        currentEntry === 'player3' ? 'Colleen' : 'Toby';
  
       const { data: player, error: playerError } = await supabase
         .from('players')
@@ -237,20 +234,44 @@ const PuzzleScoreboard: React.FC = () => {
     }
   };
  
-  const calculateScores = (input: string) => {
-    // Implement your score calculation logic here
-    // This is a placeholder implementation
-    const score = 0;
-    const bonusPoints = {
-      wordleQuick: false,
-      connectionsPerfect: false,
-      strandsSpanagram: false
-    };
-    const gameScores = {
+  const calculateScores = (input: string): ScoreCalculationResult => {
+    // Parse input format: "W4 C4/4 S7 BW BC"
+    const parts = input.toUpperCase().split(' ');
+    let score = 0;
+    const gameScores: GameScores = {
       wordle: 0,
       connections: 0,
       strands: 0
     };
+    const bonusPoints: DailyBonusPoints = {
+      wordleQuick: false,
+      connectionsPerfect: false,
+      strandsSpanagram: false
+    };
+
+    parts.forEach(part => {
+      if (part.startsWith('W')) {
+        gameScores.wordle = parseInt(part.slice(1)) || 0;
+        score += gameScores.wordle;
+      } else if (part.startsWith('C')) {
+        const [attempts] = part.slice(1).split('/');
+        gameScores.connections = parseInt(attempts) || 0;
+        score += gameScores.connections;
+      } else if (part.startsWith('S')) {
+        gameScores.strands = parseInt(part.slice(1)) || 0;
+        score += gameScores.strands;
+      } else if (part === 'BW') {
+        bonusPoints.wordleQuick = true;
+        score += 1;
+      } else if (part === 'BC') {
+        bonusPoints.connectionsPerfect = true;
+        score += 1;
+      } else if (part === 'BS') {
+        bonusPoints.strandsSpanagram = true;
+        score += 1;
+      }
+    });
+
     return { score, bonusPoints, gameScores };
   };
   
@@ -269,22 +290,64 @@ const PuzzleScoreboard: React.FC = () => {
       console.error('Error finalizing scores:', error);
     }
   };
+
+  const handlePlayerSelect = (player: PlayerKey) => {
+    setCurrentEntry(player);
+  };
  
+  // Add input handling UI elements
   return (
     <div className="w-full max-w-4xl mx-auto">
       {!isAdmin && <AdminAuth onLogin={() => setIsAdmin(true)} />}
       <div className="p-6">
-      {isAdmin && (
-  <div className="mb-4 flex justify-end">
-    <ArchiveButton onArchiveComplete={handleArchiveComplete} />
-  </div>
-)}
+        {isAdmin && (
+          <>
+            <div className="mb-4 flex justify-end">
+              <ArchiveButton onArchiveComplete={fetchAllScores} />
+            </div>
+            <div className="mb-4 space-y-2">
+              <div className="flex gap-2">
+                {['player1', 'player2', 'player3', 'player4'].map((player) => (
+                  <button
+                    key={player}
+                    onClick={() => handlePlayerSelect(player as PlayerKey)}
+                    className={`px-4 py-2 rounded ${
+                      currentEntry === player ? 'bg-blue-500 text-white' : 'bg-gray-200'
+                    }`}
+                  >
+                    {player === 'player1' ? 'Keith' : 
+                     player === 'player2' ? 'Mike' : 
+                     player === 'player3' ? 'Colleen' : 'Toby'}
+                  </button>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={inputText}
+                  onChange={(e) => setInputText(e.target.value)}
+                  className="flex-1 p-2 border rounded"
+                  placeholder="Enter scores..."
+                  disabled={!currentEntry}
+                />
+                <button
+                  onClick={handleSubmit}
+                  className="px-4 py-2 bg-blue-500 text-white rounded disabled:bg-gray-300"
+                  disabled={!currentEntry || !inputText}
+                >
+                  Submit
+                </button>
+              </div>
+            </div>
+          </>
+        )}
         
         {/* Scoreboard */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <ScoreCard playerName={player1Name} scores={scores.player1} />
-          <ScoreCard playerName={player2Name} scores={scores.player2} />
-          <ScoreCard playerName={player3Name} scores={scores.player3} />
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <ScoreCard playerName={player1Name} score={scores.player1} />
+          <ScoreCard playerName={player2Name} score={scores.player2} />
+          <ScoreCard playerName={player3Name} score={scores.player3} />
+          <ScoreCard playerName={player4Name} score={scores.player4} />
         </div>
         
         {/* Score Charts */}
@@ -292,5 +355,6 @@ const PuzzleScoreboard: React.FC = () => {
       </div>
     </div>
   );
- 
- export default PuzzleScoreboard;
+};
+
+export default PuzzleScoreboard;
