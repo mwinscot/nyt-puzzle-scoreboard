@@ -77,7 +77,14 @@ const ScoreCharts: React.FC<ScoreChartsProps> = ({ scores }) => {
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis 
               dataKey="date" 
-              tickFormatter={(date) => new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+              tickFormatter={(date) => {
+                const d = new Date(date + 'T00:00:00-08:00');
+                return d.toLocaleDateString('en-US', { 
+                  month: 'numeric', 
+                  day: 'numeric',
+                  timeZone: 'America/Los_Angeles'
+                });
+              }}
             />
             <YAxis />
             <Tooltip />
