@@ -294,7 +294,7 @@ const PuzzleScoreboard: React.FC = () => {
       console.log('Wordle:', { base: gameScores.wordle, bonus: bonusPoints.wordleQuick });
     }
 
-    // Fixed Connections parsing with more lenient regex
+    // Fixed Connections scoring logic
     const puzzleText = sections.find(s => s.includes('Puzzle #'));
     if (puzzleText) {
       const allLines = puzzleText.split('\n');
@@ -309,11 +309,13 @@ const PuzzleScoreboard: React.FC = () => {
         movesLength: moves.length
       });
       
-      // Check for group completion (all same color in a line)
+      // Check for valid completion and errors
       const completed = moves.length === 4;
+      // Count as error only if a line has mixed colors
       const hasErrors = moves.some(line => {
         const firstEmoji = line[0];
-        return line.split('').some(emoji => emoji !== firstEmoji);
+        const allSameColor = [...line].every(emoji => emoji === firstEmoji);
+        return !allSameColor;
       });
       const purpleFirst = moves.length > 0 && moves[0] === '🟪🟪🟪🟪';
       
@@ -327,22 +329,17 @@ const PuzzleScoreboard: React.FC = () => {
 
       if (completed) {
         if (purpleFirst && !hasErrors) {
-          gameScores.connections = 3;
+          gameScores.connections = 3; // Purple first and no errors
           bonusPoints.connectionsPerfect = true;
-          console.log('Perfect game with purple first: 3 points');
         } else if (!hasErrors) {
-          gameScores.connections = 2;
-          console.log('Perfect game without purple first: 2 points');
+          gameScores.connections = 2; // No errors but purple not first
         } else if (purpleFirst) {
-          gameScores.connections = 2;
-          console.log('Purple first but with errors: 2 points');
+          gameScores.connections = 2; // Purple first but with errors
         } else {
-          gameScores.connections = 1;
-          console.log('Completed with errors: 1 point');
+          gameScores.connections = 1; // Completed with errors
         }
+        console.log('Connections final score:', gameScores.connections);
       }
-
-      console.log('Final Connections score:', gameScores.connections);
     }
 
     // Fixed Strands scoring with yellow circle detection
