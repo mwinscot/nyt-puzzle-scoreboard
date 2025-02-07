@@ -207,11 +207,14 @@ const PuzzleScoreboard: React.FC = () => {
  
     try {
       const { score, bonusPoints, gameScores } = calculateScores(inputText);
+      console.log('Calculated scores:', { score, bonusPoints, gameScores });
       
       const playerName = currentEntry === 'player1' ? 'Keith' : 
                         currentEntry === 'player2' ? 'Mike' : 
                         currentEntry === 'player3' ? 'Colleen' : 'Toby';
  
+      console.log('Submitting for player:', playerName, 'on date:', currentDate);
+
       const { data: player, error: playerError } = await supabase
         .from('players')
         .select('id')
@@ -219,23 +222,29 @@ const PuzzleScoreboard: React.FC = () => {
         .single();
  
       if (playerError) throw playerError;
+
+      const scoreData = {
+        date: currentDate,
+        player_id: player.id,
+        wordle: gameScores.wordle,
+        connections: gameScores.connections,
+        strands: gameScores.strands,
+        total: score,
+        bonus_wordle: bonusPoints.wordleQuick,
+        bonus_connections: bonusPoints.connectionsPerfect,
+        bonus_strands: bonusPoints.strandsSpanagram,
+        finalized: false
+      };
+
+      console.log('Submitting score data:', scoreData);
  
-      const { error: scoreError } = await supabase
+      const { data: result, error: scoreError } = await supabase
         .from('daily_scores')
-        .upsert({
-          date: currentDate,
-          player_id: player.id,
-          wordle: gameScores.wordle,
-          connections: gameScores.connections,
-          strands: gameScores.strands,
-          total: score,
-          bonus_wordle: bonusPoints.wordleQuick,
-          bonus_connections: bonusPoints.connectionsPerfect,
-          bonus_strands: bonusPoints.strandsSpanagram,
-          finalized: false
-        });
- 
+        .upsert(scoreData)
+        .select();
+
       if (scoreError) throw scoreError;
+      console.log('Submission result:', result);
  
       await fetchAllScores();
       setInputText('');
