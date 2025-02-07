@@ -274,7 +274,7 @@ const PuzzleScoreboard: React.FC = () => {
     const sections = input.split(/\n(?=[A-Za-z])/);
     console.log('Sections:', sections);
 
-    // Parse Wordle
+    // Parse Wordle (1 point for completion)
     const wordleSection = sections.find(s => s.startsWith('Wordle'));
     if (wordleSection) {
       gameScores.wordle = 1; // Base point for completing
@@ -288,22 +288,40 @@ const PuzzleScoreboard: React.FC = () => {
     }
 
     // Parse Connections
-    const connectionsSection = sections.find(s => s.startsWith('Connections'));
+    const connectionsSection = sections.find(s => s.includes('Connections'));
     if (connectionsSection) {
-      const lines = connectionsSection.split('\n');
-      const moves = lines.filter(line => /[🟪🟩🟨🟦]{4}/.test(line));
-      const purpleIndex = moves.findIndex(line => line.includes('🟪🟪🟪🟪'));
-      const hasErrors = moves.some(line => line.includes('🟨'));
-      const completed = moves.some(line => line.includes('🟩🟩🟩🟩'));
+      const lines = connectionsSection.split('\n').filter(line => /[🟪🟩🟨🟦]{4}/.test(line));
+      const purpleIndex = lines.findIndex(line => line.includes('🟪🟪🟪🟪'));
+      const hasErrors = lines.some(line => line.includes('🟨'));
+      const completed = lines.some(line => line.includes('🟩🟩🟩🟩'));
 
       if (completed) {
+        console.log('Connections moves:', { lines, purpleIndex, hasErrors });
+        
         if (!hasErrors) {
-          gameScores.connections = purpleIndex === 0 ? 3 : 2;
+          // Perfect game
+          if (purpleIndex === 0) {
+            gameScores.connections = 3; // Purple first and perfect
+          } else {
+            gameScores.connections = 2; // Perfect but purple not first
+          }
         } else {
-          gameScores.connections = purpleIndex === 0 ? 2 : 1;
+          // Game with errors
+          if (purpleIndex === 0) {
+            gameScores.connections = 2; // Purple first but errors
+          } else {
+            gameScores.connections = 1; // Completed with errors
+          }
+        
+          // Update logging with scoped variables
+          console.log('Connections:', { 
+            score: gameScores.connections, 
+            purpleFirst: purpleIndex === 0, 
+            hasErrors,
+            completed 
+          });
         }
       }
-      console.log('Connections:', { score: gameScores.connections, purpleFirst: purpleIndex === 0, hasErrors });
     }
 
     // Parse Strands
@@ -526,7 +544,7 @@ const PuzzleScoreboard: React.FC = () => {
                 <li>1 point for completing the puzzle with errors</li>
                 <li>2 points for completing the puzzle with no errors</li>
                 <li>3 points if you get purple first and complete with no errors</li>
-                <li>2 points if you get purple first but have errors</li>
+                <li>2 points if you get purple first but with errors</li>
               </ul>
             </div>
 
