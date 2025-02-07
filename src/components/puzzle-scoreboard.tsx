@@ -294,32 +294,39 @@ const PuzzleScoreboard: React.FC = () => {
       console.log('Wordle:', { base: gameScores.wordle, bonus: bonusPoints.wordleQuick });
     }
 
-    // Fixed Connections scoring logic
+    // Fixed Connections scoring logic with corrected error checking
     const puzzleText = sections.find(s => s.includes('Puzzle #'));
     if (puzzleText) {
-      const moves = puzzleText
-        .split('\n')
-        .filter(line => line.trim().match(/^[🟪🟩🟨🟦]{4}$/));
+      const allLines = puzzleText.split('\n');
+      const moves = allLines
+        .map(line => line.trim())
+        .filter(line => line && /^[🟪🟩🟨🟦]{4}$/.test(line));
       
-      console.log('Raw Connection moves:', moves);
+      console.log('Connection moves found:', {
+        allLines,
+        filteredMoves: moves,
+        movesLength: moves.length
+      });
+      
+      // Updated error checking - error is when there's a mix of colors in a line
+      const hasErrors = moves.some(line => {
+        const firstEmoji = line[0];
+        return !line.split('').every(emoji => emoji === firstEmoji);
+      });
 
-      // Reset conditions check
-      const hasErrors = moves.some(line => line.includes('🟨'));
-      const completed = moves.length > 0;
+      const completed = moves.length === 4;
       const purpleMove = moves.find(line => line === '🟪🟪🟪🟪');
-      const purpleFirst = purpleMove && moves.indexOf(purpleMove) === 0;
+      const purpleFirst = moves.length > 0 && moves[0] === '🟪🟪🟪🟪';
       
-      console.log('Connections detailed analysis:', {
+      console.log('Connections analysis:', {
         moves,
         hasErrors,
         completed,
         purpleMove,
         purpleFirst,
-        firstMove: moves[0],
-        moveCount: moves.length
+        firstMove: moves[0]
       });
 
-      // Fixed scoring logic
       if (completed) {
         if (purpleFirst && !hasErrors) {
           gameScores.connections = 3;
@@ -337,15 +344,10 @@ const PuzzleScoreboard: React.FC = () => {
         }
       }
 
-      console.log('Final Connections score:', {
-        score: gameScores.connections,
-        hasErrors,
-        purpleFirst,
-        completed
-      });
+      console.log('Final Connections score:', gameScores.connections);
     }
 
-    // Fix Strands scoring to include bonus in gameScores
+    // Fixed Strands scoring with yellow circle detection
     const strandsSection = sections.find(s => s.startsWith('Strands'));
     if (strandsSection) {
       gameScores.strands = 1; // Base score
@@ -354,7 +356,8 @@ const PuzzleScoreboard: React.FC = () => {
         .slice(2)
         .map(line => line.trim());
       
-      const spanagramIndex = lines.findIndex(line => (line.match(/🔵/g) || []).length >= 3);
+      // Changed to look for yellow circles (spanagram)
+      const spanagramIndex = lines.findIndex(line => (line.match(/🟡/g) || []).length >= 3);
       const spanagramInFirstThree = spanagramIndex !== -1 && spanagramIndex < 3;
       
       console.log('Strands analysis:', {
@@ -366,7 +369,7 @@ const PuzzleScoreboard: React.FC = () => {
 
       if (spanagramInFirstThree) {
         bonusPoints.strandsSpanagram = true;
-        gameScores.strands = 2; // Include bonus in game score
+        gameScores.strands = 2;
       }
 
       console.log('Strands final:', {
