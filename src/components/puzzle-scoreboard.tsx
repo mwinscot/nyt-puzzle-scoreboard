@@ -6,6 +6,8 @@ import ScoreCharts from '@/components/ScoreCharts';
 import { getMonthDateRange } from '@/utils/dateUtils';
 import { ScoreCard } from './ScoreCard';
 import { ArchiveButton } from '@/components/ArchiveButton';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { TotalScoreHeader } from './TotalScoreHeader';  // Fixed import
 
 const getCurrentDatePST = (): string => {
  const pstNow = new Date().toLocaleString("en-US", {
@@ -300,6 +302,7 @@ const PuzzleScoreboard: React.FC = () => {
     <div className="w-full max-w-4xl mx-auto">
       {!isAdmin && <AdminAuth onLogin={() => setIsAdmin(true)} />}
       <div className="p-6">
+        {/* Admin Controls */}
         {isAdmin && (
           <>
             <div className="mb-4 flex justify-end">
@@ -341,9 +344,23 @@ const PuzzleScoreboard: React.FC = () => {
             </div>
           </>
         )}
-        
-        {/* Scoreboard */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+
+        {/* Header Scoreboard */}
+        <div className="mb-8">
+          <TotalScoreHeader
+            player1Score={scores.player1.total}
+            player2Score={scores.player2.total}
+            player3Score={scores.player3.total}
+            player4Score={scores.player4.total}
+            player1Name={player1Name}
+            player2Name={player2Name}
+            player3Name={player3Name}
+            player4Name={player4Name}
+          />
+        </div>
+
+        {/* Score Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
           <ScoreCard playerName={player1Name} score={scores.player1} />
           <ScoreCard playerName={player2Name} score={scores.player2} />
           <ScoreCard playerName={player3Name} score={scores.player3} />
@@ -351,7 +368,47 @@ const PuzzleScoreboard: React.FC = () => {
         </div>
         
         {/* Score Charts */}
-        <ScoreCharts scores={scores} />
+        <div className="mt-6">
+          <ScoreCharts scores={scores} />
+        </div>
+
+        {/* Rules Section */}
+        <Card className="mt-8 bg-gray-50">
+          <CardHeader>
+            <CardTitle className="text-xl font-semibold text-gray-900">Game Rules & Scoring</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div>
+              <h3 className="text-lg font-semibold mb-2 text-gray-900">Wordle</h3>
+              <ul className="list-disc pl-6 space-y-1 text-gray-800">
+                <li>1 point for completing the puzzle</li>
+                <li>1 bonus point if finished within 3 lines or less</li>
+              </ul>
+            </div>
+
+            <div className="my-4 border-t border-gray-200" />
+
+            <div>
+              <h3 className="text-lg font-semibold mb-2 text-gray-900">Connections</h3>
+              <ul className="list-disc pl-6 space-y-1 text-gray-800">
+                <li>1 point for completing the puzzle with errors</li>
+                <li>2 points for completing the puzzle with no errors</li>
+                <li>3 points if you get purple first and complete with no errors</li>
+                <li>2 points if you get purple first but have errors</li>
+              </ul>
+            </div>
+
+            <div className="my-4 border-t border-gray-200" />
+
+            <div>
+              <h3 className="text-lg font-semibold mb-2 text-gray-900">Strands</h3>
+              <ul className="list-disc pl-6 space-y-1 text-gray-800">
+                <li>1 point for completing the puzzle with no hints</li>
+                <li>1 bonus point if spanagram found within first three moves</li>
+              </ul>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
