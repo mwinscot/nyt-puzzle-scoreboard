@@ -294,38 +294,46 @@ const PuzzleScoreboard: React.FC = () => {
       console.log('Wordle:', { base: gameScores.wordle, bonus: bonusPoints.wordleQuick });
     }
 
-    // Fixed Connections parsing
+    // Fixed Connections scoring logic
     const puzzleText = sections.find(s => s.includes('Puzzle #'));
     if (puzzleText) {
-      // Get only the emoji lines
       const moves = puzzleText
         .split('\n')
         .filter(line => /[🟪🟩🟨🟦]{4}/.test(line.trim()));
       
       console.log('Connection moves:', moves);
       
-      // Check conditions
+      // Check conditions more carefully
       const hasErrors = moves.some(line => line.includes('🟨'));
       const completed = moves.some(line => line.includes('🟩🟩🟩🟩'));
-      const purpleIndex = moves.findIndex(line => line.includes('🟪🟪🟪🟪'));
+      const purpleMove = moves.find(line => line.includes('🟪🟪🟪🟪'));
+      const purpleIndex = purpleMove ? moves.indexOf(purpleMove) : -1;
       const purpleFirst = purpleIndex === 0;
+      const allMoves = moves.filter(line => /^[🟪🟩🟨🟦]{4}$/.test(line.trim()));
       
-      console.log('Connections analysis:', {
-        moves,
+      console.log('Connections detailed analysis:', {
+        allMoves,
         hasErrors,
         completed,
         purpleIndex,
         purpleFirst,
+        purpleMove,
         moveCount: moves.length
       });
 
       if (completed) {
-        if (!hasErrors) {
-          gameScores.connections = purpleFirst ? 3 : 2;
-          console.log('Perfect game:', gameScores.connections, 'points');
+        if (!hasErrors && purpleFirst) {
+          gameScores.connections = 3; // Perfect game with purple first
+          console.log('Perfect game with purple first: 3 points');
+        } else if (!hasErrors) {
+          gameScores.connections = 2; // Perfect game but purple not first
+          console.log('Perfect game without purple first: 2 points');
+        } else if (purpleFirst) {
+          gameScores.connections = 2; // Purple first but with errors
+          console.log('Purple first but with errors: 2 points');
         } else {
-          gameScores.connections = purpleFirst ? 2 : 1;
-          console.log('Game with errors:', gameScores.connections, 'points');
+          gameScores.connections = 1; // Completed with errors
+          console.log('Completed with errors: 1 point');
         }
       }
 
@@ -433,7 +441,6 @@ const PuzzleScoreboard: React.FC = () => {
     return updates;
   };
 
-  // Fix the return statement JSX structure
   return (
     <div className="w-full max-w-4xl mx-auto">
       {!isAdmin && <AdminAuth onLogin={() => setIsAdmin(true)} />}
