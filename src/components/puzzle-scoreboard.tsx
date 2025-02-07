@@ -287,34 +287,48 @@ const PuzzleScoreboard: React.FC = () => {
       console.log('Wordle:', { base: gameScores.wordle, bonus: bonusPoints.wordleQuick });
     }
 
-    // Parse Connections with fixed section handling
-    const connectionsText = sections.find(s => s.includes('Connections')) || '';
-    const puzzleSection = sections.find(s => s.includes('Puzzle #')) || '';
-    
-    if (connectionsText && puzzleSection) {
+    // Parse Connections with proper move parsing
+    const puzzleSection = sections.find(s => s.includes('Puzzle #'));
+    if (puzzleSection) {
       console.log('Parsing Connections section:', puzzleSection);
       
-      const lines = puzzleSection
+      // Get only the emoji moves
+      const moves = puzzleSection
         .split('\n')
-        .filter(line => /[🟪🟩🟨🟦]{4}/.test(line));
+        .filter(line => /^[🟪🟩🟨🟦]{4}$/.test(line.trim()));
       
-      console.log('Connection moves:', lines);
+      console.log('Connection moves found:', moves);
       
-      const hasErrors = lines.some(line => line.includes('🟨'));
-      const completed = lines.some(line => line.includes('🟩🟩🟩🟩'));
-      const purpleIndex = lines.findIndex(line => line.includes('🟪🟪🟪🟪'));
-      
-      console.log('Connection analysis:', { hasErrors, completed, purpleIndex });
+      const hasErrors = moves.some(line => line.includes('🟨'));
+      const completed = moves.some(line => line.includes('🟩🟩🟩🟩'));
+      const purpleIndex = moves.findIndex(line => line.includes('🟪🟪🟪🟪'));
+
+      console.log('Connection analysis:', { 
+        hasErrors, 
+        completed, 
+        purpleIndex,
+        moveCount: moves.length 
+      });
 
       if (completed) {
         if (!hasErrors) {
-          gameScores.connections = purpleIndex === 0 ? 3 : 2;
+          if (purpleIndex === 0) {
+            gameScores.connections = 3; // Perfect game with purple first
+            console.log('Perfect game with purple first: 3 points');
+          } else {
+            gameScores.connections = 2; // Perfect game
+            console.log('Perfect game: 2 points');
+          }
         } else {
-          gameScores.connections = purpleIndex === 0 ? 2 : 1;
+          if (purpleIndex === 0) {
+            gameScores.connections = 2; // Purple first but with errors
+            console.log('Purple first with errors: 2 points');
+          } else {
+            gameScores.connections = 1; // Completed with errors
+            console.log('Completed with errors: 1 point');
+          }
         }
       }
-
-      console.log('Connections score:', gameScores.connections);
     }
 
     // Parse Strands (no changes needed)
