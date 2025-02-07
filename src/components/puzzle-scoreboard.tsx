@@ -357,13 +357,11 @@ const PuzzleScoreboard: React.FC = () => {
 
       if (spanagramInFirstThree) {
         bonusPoints.strandsSpanagram = true;
-        gameScores.strands += 1; // Add the bonus point to the game score
       }
 
       console.log('Strands final:', {
-        baseScore: 1,
-        bonus: bonusPoints.strandsSpanagram,
-        totalScore: gameScores.strands
+        baseScore: gameScores.strands,
+        bonus: bonusPoints.strandsSpanagram
       });
     }
 
@@ -382,11 +380,10 @@ const PuzzleScoreboard: React.FC = () => {
       },
       bonuses: {
         wordle: bonusPoints.wordleQuick ? 1 : 0,
-        connections: bonusPoints.connectionsPerfect ? 1 : 0,
         strands: bonusPoints.strandsSpanagram ? 1 : 0,
         bonusTotal: bonusCount
       },
-      total: totalScore
+      totalScore
     });
 
     return { 
