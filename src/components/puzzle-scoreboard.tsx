@@ -294,13 +294,14 @@ const PuzzleScoreboard: React.FC = () => {
       console.log('Wordle:', { base: gameScores.wordle, bonus: bonusPoints.wordleQuick });
     }
 
-    // Fixed Connections scoring logic with corrected error checking
+    // Fixed Connections parsing with more lenient regex
     const puzzleText = sections.find(s => s.includes('Puzzle #'));
     if (puzzleText) {
       const allLines = puzzleText.split('\n');
       const moves = allLines
-        .map(line => line.trim())
-        .filter(line => line && /^[🟪🟩🟨🟦]{4}$/.test(line));
+        .filter(line => line.includes('🟪') || line.includes('🟩') || 
+                       line.includes('🟨') || line.includes('🟦'))
+        .map(line => line.trim());
       
       console.log('Connection moves found:', {
         allLines,
@@ -308,21 +309,18 @@ const PuzzleScoreboard: React.FC = () => {
         movesLength: moves.length
       });
       
-      // Updated error checking - error is when there's a mix of colors in a line
+      // Check for group completion (all same color in a line)
+      const completed = moves.length === 4;
       const hasErrors = moves.some(line => {
         const firstEmoji = line[0];
-        return !line.split('').every(emoji => emoji === firstEmoji);
+        return line.split('').some(emoji => emoji !== firstEmoji);
       });
-
-      const completed = moves.length === 4;
-      const purpleMove = moves.find(line => line === '🟪🟪🟪🟪');
       const purpleFirst = moves.length > 0 && moves[0] === '🟪🟪🟪🟪';
       
       console.log('Connections analysis:', {
         moves,
         hasErrors,
         completed,
-        purpleMove,
         purpleFirst,
         firstMove: moves[0]
       });
