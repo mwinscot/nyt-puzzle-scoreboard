@@ -259,7 +259,7 @@ const PuzzleScoreboard: React.FC = () => {
   const calculateScores = (input: string): ScoreCalculationResult => {
     console.log('Raw input:', input);
     
-    let score = 0;
+    let totalScore = 0;
     const gameScores: GameScores = {
       wordle: 0,
       connections: 0,
@@ -283,12 +283,10 @@ const PuzzleScoreboard: React.FC = () => {
       
       if (solutionLine !== -1) {
         gameScores.wordle = 1; // Base point for completing
-        score += 1;
         console.log('Added base Wordle point');
 
         if (solutionLine <= 2) { // Index 2 = line 3
           bonusPoints.wordleQuick = true;
-          score += 1;
           console.log('Added Wordle bonus point');
         }
       }
@@ -306,21 +304,17 @@ const PuzzleScoreboard: React.FC = () => {
         if (!hasErrors) {
           if (purpleIndex === 0) {
             gameScores.connections = 3; // Purple first and perfect
-            score += 3;
             console.log('Added 3 points for perfect Connections with purple first');
           } else {
             gameScores.connections = 2; // Perfect but purple not first
-            score += 2;
             console.log('Added 2 points for perfect Connections');
           }
         } else {
           if (purpleIndex === 0) {
             gameScores.connections = 2; // Purple first but with errors
-            score += 2;
             console.log('Added 2 points for Connections with purple first but errors');
           } else {
             gameScores.connections = 1; // Completed with errors
-            score += 1;
             console.log('Added 1 point for completing Connections with errors');
           }
         }
@@ -335,29 +329,32 @@ const PuzzleScoreboard: React.FC = () => {
       
       if (blueCircles.some(count => count > 0)) {
         gameScores.strands = 1;
-        score += 1;
         console.log('Added base Strands point');
         
         // Check for spanagram (3+ blue circles) in first three moves
         const spanagramIndex = blueCircles.findIndex(count => count >= 3);
         if (spanagramIndex !== -1 && spanagramIndex < 3) {
           bonusPoints.strandsSpanagram = true;
-          score += 1;
           console.log('Added Strands bonus point');
         }
       }
     }
 
-    console.log('Final scores:', {
-      total: score,
-      gameScores,
-      bonusPoints,
-      breakdown: `Wordle: ${gameScores.wordle} + ${bonusPoints.wordleQuick ? '1' : '0'}, ` +
-                 `Connections: ${gameScores.connections}, ` +
-                 `Strands: ${gameScores.strands} + ${bonusPoints.strandsSpanagram ? '1' : '0'}`
+    // Calculate total score
+    totalScore = gameScores.wordle + gameScores.connections + gameScores.strands +
+                (bonusPoints.wordleQuick ? 1 : 0) +
+                (bonusPoints.strandsSpanagram ? 1 : 0);
+
+    const result = { score: totalScore, bonusPoints, gameScores };
+    
+    console.log('Score breakdown:', {
+      wordle: `${gameScores.wordle} + ${bonusPoints.wordleQuick ? '1' : '0'} bonus`,
+      connections: gameScores.connections,
+      strands: `${gameScores.strands} + ${bonusPoints.strandsSpanagram ? '1' : '0'} bonus`,
+      total: totalScore
     });
 
-    return { score, bonusPoints, gameScores };
+    return result;
   };
 
   const finalizeDayScores = async () => {
@@ -408,7 +405,7 @@ const PuzzleScoreboard: React.FC = () => {
     return updates;
   };
 
-  // Add input handling UI elements
+  // Fix the return statement JSX structure
   return (
     <div className="w-full max-w-4xl mx-auto">
       {!isAdmin && <AdminAuth onLogin={() => setIsAdmin(true)} />}
