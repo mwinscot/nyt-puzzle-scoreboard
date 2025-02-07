@@ -347,33 +347,24 @@ const PuzzleScoreboard: React.FC = () => {
               <ArchiveButton onArchiveComplete={fetchAllScores} />
             </div>
 
-            {/* Add Last Updates Section */}
+            {/* Last Updates Section */}
             <div className="mb-6 bg-gray-50 rounded-lg p-4 shadow">
-              <h3 className="text-lg font-semibold mb-3 text-gray-700">Last Updates</h3>
-              <div className="grid grid-cols-4 gap-4">
-                {Object.entries(getLastUpdates()).map(([name, data]) => (
-                  <div key={name} className="text-sm">
-                    <div className="font-medium text-gray-900">{name}</div>
-                    {data.date ? (
-                      <>
-                        <div className="text-gray-600">
-                          {data.displayDate.toLocaleDateString('en-US', {
-                            timeZone: 'America/Los_Angeles',
-                            month: 'numeric',
-                            day: 'numeric'
-                          })}
-                        </div>
-                        <div className="text-gray-800">Score: {data.score}</div>
-                      </>
-                    ) : (
-                      <div className="text-gray-400">No entries yet</div>
-                    )}
-                  </div>
-                ))}
-              </div>
+              {/* ...existing last updates code... */}
             </div>
 
             <div className="mb-4 space-y-2">
+              {/* Date Selector */}
+              <div className="flex gap-2 items-center mb-4">
+                <label className="text-gray-700 font-medium">Date:</label>
+                <input
+                  type="date"
+                  value={currentDate}
+                  onChange={(e) => setCurrentDate(e.target.value)}
+                  className="p-2 border rounded"
+                />
+              </div>
+
+              {/* Player Selection */}
               <div className="flex gap-2">
                 {['player1', 'player2', 'player3', 'player4'].map((player) => (
                   <button
@@ -389,6 +380,8 @@ const PuzzleScoreboard: React.FC = () => {
                   </button>
                 ))}
               </div>
+
+              {/* Score Input */}
               <div className="flex gap-2">
                 <textarea
                   value={inputText}
