@@ -297,28 +297,30 @@ const PuzzleScoreboard: React.FC = () => {
     // Fixed Connections scoring logic
     const puzzleText = sections.find(s => s.includes('Puzzle #'));
     if (puzzleText) {
-      const allLines = puzzleText.split('\n');
-      // Filter only the emoji moves, excluding any header text
-      const moves = allLines
-        .filter(line => line.trim().match(/^[🟪🟩🟨🟦]{4}$/))
-        .map(line => line.trim());
-      
-      console.log('Connection moves found:', {
-        allLines,
-        validMoves: moves,
-        moveCount: moves.length
-      });
+      // Split into lines and remove empty lines
+      const allLines = puzzleText.split('\n').map(line => line.trim()).filter(Boolean);
+      console.log('All lines:', allLines);
 
-      // Simplified scoring logic
+      // Find lines that contain exactly 4 emojis of the same color
+      const moves = allLines.filter(line => 
+        line === '🟪🟪🟪🟪' || 
+        line === '🟩🟩🟩🟩' || 
+        line === '🟨🟨🟨🟨' || 
+        line === '🟦🟦🟦🟦'
+      );
+      
+      console.log('Found moves:', moves);
+
+      // Simple scoring conditions
       const completed = moves.length === 4;
-      const hasErrors = false; // Changed since rows with all same color are valid
+      const hasErrors = false; // Since we only capture perfect groups
       const purpleFirst = moves[0] === '🟪🟪🟪🟪';
 
-      console.log('Connections analysis:', {
-        moves,
-        hasErrors,
+      console.log('Connections state:', {
         completed,
+        hasErrors,
         purpleFirst,
+        moveCount: moves.length,
         firstMove: moves[0]
       });
 
@@ -326,18 +328,18 @@ const PuzzleScoreboard: React.FC = () => {
         if (purpleFirst) {
           gameScores.connections = 3;
           bonusPoints.connectionsPerfect = true;
-          console.log('Purple first, no errors: 3 points');
+          console.log('Perfect game with purple first: 3 points');
         } else {
           gameScores.connections = 2;
-          console.log('Completed perfectly but purple not first: 2 points');
+          console.log('Perfect game without purple first: 2 points');
         }
       }
 
       console.log('Final Connections score:', gameScores.connections);
     }
 
-    // Fixed Strands scoring with yellow circle detection
-    const strandsSection = sections.find(s => s.startsWith('Strands'));
+    // Fixed Strands section check
+    const strandsSection = sections.find(section => section.startsWith('Strands'));
     if (strandsSection) {
       gameScores.strands = 1; // Base score
       
