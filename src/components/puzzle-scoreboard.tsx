@@ -294,45 +294,45 @@ const PuzzleScoreboard: React.FC = () => {
       console.log('Wordle:', { base: gameScores.wordle, bonus: bonusPoints.wordleQuick });
     }
 
-    // Fixed Connections scoring logic
+    // Improved Connections scoring logic
     const puzzleText = sections.find(s => s.includes('Puzzle #'));
     if (puzzleText) {
       const moves = puzzleText
         .split('\n')
         .filter(line => /[🟪🟩🟨🟦]{4}/.test(line.trim()));
       
-      console.log('Connection moves:', moves);
+      console.log('Raw Connection moves:', moves);
       
-      // Check conditions more carefully
-      const hasErrors = moves.some(line => line.includes('🟨'));
-      const completed = moves.some(line => line.includes('🟩🟩🟩🟩'));
-      const purpleMove = moves.find(line => line.includes('🟪🟪🟪🟪'));
-      const purpleIndex = purpleMove ? moves.indexOf(purpleMove) : -1;
-      const purpleFirst = purpleIndex === 0;
-      const allMoves = moves.filter(line => /^[🟪🟩🟨🟦]{4}$/.test(line.trim()));
+      // More precise conditions checking
+      const validMoves = moves.filter(line => /^[🟪🟩🟨🟦]{4}$/.test(line.trim()));
+      const hasErrors = validMoves.some(line => line.includes('🟨'));
+      const completed = validMoves.some(line => line.includes('🟩🟩🟩🟩'));
+      const purpleMove = validMoves.find(line => line === '🟪🟪🟪🟪');
+      const purpleFirst = purpleMove && validMoves[0] === purpleMove;
       
-      console.log('Connections detailed analysis:', {
-        allMoves,
+      console.log('Connections analysis:', {
+        validMoves,
         hasErrors,
         completed,
-        purpleIndex,
-        purpleFirst,
         purpleMove,
-        moveCount: moves.length
+        purpleFirst,
+        firstMove: validMoves[0],
+        moveCount: validMoves.length
       });
 
       if (completed) {
-        if (!hasErrors && purpleFirst) {
-          gameScores.connections = 3; // Perfect game with purple first
+        if (purpleFirst && !hasErrors) {
+          gameScores.connections = 3;
+          bonusPoints.connectionsPerfect = true;
           console.log('Perfect game with purple first: 3 points');
         } else if (!hasErrors) {
-          gameScores.connections = 2; // Perfect game but purple not first
+          gameScores.connections = 2;
           console.log('Perfect game without purple first: 2 points');
         } else if (purpleFirst) {
-          gameScores.connections = 2; // Purple first but with errors
+          gameScores.connections = 2;
           console.log('Purple first but with errors: 2 points');
         } else {
-          gameScores.connections = 1; // Completed with errors
+          gameScores.connections = 1;
           console.log('Completed with errors: 1 point');
         }
       }
