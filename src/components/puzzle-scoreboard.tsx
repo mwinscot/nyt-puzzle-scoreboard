@@ -256,8 +256,12 @@ const PuzzleScoreboard: React.FC = () => {
   };
  
   const calculateScores = (input: string): ScoreCalculationResult => {
-    // Parse input format: "W4 C4/4 S7 BW BC"
-    const parts = input.toUpperCase().split(' ');
+    console.log('Raw input:', input); // Debug log
+    
+    // Clean the input - remove extra whitespace and split on any whitespace
+    const parts = input.toUpperCase().trim().split(/\s+/);
+    console.log('Parsed parts:', parts); // Debug log
+    
     let score = 0;
     const gameScores: GameScores = {
       wordle: 0,
@@ -271,31 +275,49 @@ const PuzzleScoreboard: React.FC = () => {
     };
 
     parts.forEach(part => {
+      console.log('Processing part:', part); // Debug log
+      
       if (part.startsWith('W')) {
-        gameScores.wordle = parseInt(part.slice(1)) || 0;
-        score += gameScores.wordle;
+        const value = parseInt(part.slice(1));
+        if (!isNaN(value)) {
+          gameScores.wordle = value;
+          score += value;
+          console.log('Added Wordle score:', value);
+        }
       } else if (part.startsWith('C')) {
-        const [attempts] = part.slice(1).split('/');
-        gameScores.connections = parseInt(attempts) || 0;
-        score += gameScores.connections;
+        const value = parseInt(part.slice(1));
+        if (!isNaN(value)) {
+          gameScores.connections = value;
+          score += value;
+          console.log('Added Connections score:', value);
+        }
       } else if (part.startsWith('S')) {
-        gameScores.strands = parseInt(part.slice(1)) || 0;
-        score += gameScores.strands;
+        const value = parseInt(part.slice(1));
+        if (!isNaN(value)) {
+          gameScores.strands = value;
+          score += value;
+          console.log('Added Strands score:', value);
+        }
       } else if (part === 'BW') {
         bonusPoints.wordleQuick = true;
         score += 1;
+        console.log('Added Wordle bonus');
       } else if (part === 'BC') {
         bonusPoints.connectionsPerfect = true;
         score += 1;
+        console.log('Added Connections bonus');
       } else if (part === 'BS') {
         bonusPoints.strandsSpanagram = true;
         score += 1;
+        console.log('Added Strands bonus');
       }
     });
 
-    return { score, bonusPoints, gameScores };
+    const result = { score, bonusPoints, gameScores };
+    console.log('Final calculated result:', result); // Debug log
+    return result;
   };
-  
+
   const finalizeDayScores = async () => {
     if (!isAdmin) return;
     
