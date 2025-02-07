@@ -287,61 +287,78 @@ const PuzzleScoreboard: React.FC = () => {
       console.log('Wordle:', { base: gameScores.wordle, bonus: bonusPoints.wordleQuick });
     }
 
-    // Parse Connections with proper move parsing
-    const puzzleSection = sections.find(s => s.includes('Puzzle #'));
-    if (puzzleSection) {
-      console.log('Parsing Connections section:', puzzleSection);
-      
-      // Get only the emoji moves
-      const moves = puzzleSection
+    // Parse Connections with improved parsing
+    const connectionsText = sections.find(s => s.startsWith('Connections'));
+    const puzzleText = sections.find(s => s.includes('Puzzle #'));
+    
+    if (connectionsText && puzzleText) {
+      // Get the lines containing moves (4 emojis)
+      const moves = puzzleText
         .split('\n')
-        .filter(line => /^[🟪🟩🟨🟦]{4}$/.test(line.trim()));
+        .map(line => line.trim())
+        .filter(line => line.match(/^[🟪🟩🟨🟦]{4}$/));
       
       console.log('Connection moves found:', moves);
       
+      // Check key conditions
       const hasErrors = moves.some(line => line.includes('🟨'));
       const completed = moves.some(line => line.includes('🟩🟩🟩🟩'));
       const purpleIndex = moves.findIndex(line => line.includes('🟪🟪🟪🟪'));
-
-      console.log('Connection analysis:', { 
-        hasErrors, 
-        completed, 
+      const purpleFirst = purpleIndex === 0;
+      
+      console.log('Connections analysis:', {
+        moves,
+        hasErrors,
+        completed,
         purpleIndex,
-        moveCount: moves.length 
+        purpleFirst
       });
 
       if (completed) {
+        // Assign score based on performance
         if (!hasErrors) {
-          if (purpleIndex === 0) {
-            gameScores.connections = 3; // Perfect game with purple first
-            console.log('Perfect game with purple first: 3 points');
-          } else {
-            gameScores.connections = 2; // Perfect game
-            console.log('Perfect game: 2 points');
-          }
+          gameScores.connections = purpleFirst ? 3 : 2;
+          console.log(`Perfect game${purpleFirst ? ' with purple first' : ''}: ${gameScores.connections} points`);
         } else {
-          if (purpleIndex === 0) {
-            gameScores.connections = 2; // Purple first but with errors
-            console.log('Purple first with errors: 2 points');
-          } else {
-            gameScores.connections = 1; // Completed with errors
-            console.log('Completed with errors: 1 point');
-          }
+          gameScores.connections = purpleFirst ? 2 : 1;
+          console.log(`Game with errors${purpleFirst ? ' but purple first' : ''}: ${gameScores.connections} points`);
         }
       }
     }
 
-    // Parse Strands (no changes needed)
+    // Parse Strands with fixed scoring
     const strandsSection = sections.find(s => s.startsWith('Strands'));
     if (strandsSection) {
-      gameScores.strands = 1; // Base point for completing
-      const lines = strandsSection.split('\n').slice(2); // Skip title and puzzle name
-      const spanagramFound = lines.some(line => (line.match(/🔵/g) || []).length >= 3);
+      // Base score for completion
+      gameScores.strands = 1;
       
-      if (spanagramFound && lines.length <= 3) {
+      const lines = strandsSection.split('\n')
+        .slice(2) // Skip title and puzzle name
+        .map(line => line.trim());
+      
+      console.log('Strands moves:', lines);
+      
+      // Check for spanagram (3+ blue circles) in first three moves
+      const spanagramIndex = lines.findIndex(line => (line.match(/🔵/g) || []).length >= 3);
+      const spanagramInFirstThree = spanagramIndex !== -1 && spanagramIndex < 3;
+      
+      console.log('Strands analysis:', {
+        moves: lines,
+        spanagramIndex,
+        spanagramInFirstThree,
+        moveCount: lines.length
+      });
+
+      if (spanagramInFirstThree) {
         bonusPoints.strandsSpanagram = true;
+        gameScores.strands += 1; // Add the bonus point to the game score
       }
-      console.log('Strands:', { base: gameScores.strands, bonus: bonusPoints.strandsSpanagram });
+
+      console.log('Strands final:', {
+        baseScore: 1,
+        bonus: bonusPoints.strandsSpanagram,
+        totalScore: gameScores.strands
+      });
     }
 
     // Calculate total score
@@ -350,20 +367,22 @@ const PuzzleScoreboard: React.FC = () => {
                       (bonusPoints.strandsSpanagram ? 1 : 0);
     const totalScore = baseScore + bonusScore;
 
-    console.log('Score breakdown:', {
-      wordle: `${gameScores.wordle} ${bonusPoints.wordleQuick ? '+ 1 bonus' : ''}`,
+    console.log('Final score breakdown:', {
+      wordle: {
+        base: gameScores.wordle,
+        bonus: bonusPoints.wordleQuick,
+        total: gameScores.wordle + (bonusPoints.wordleQuick ? 1 : 0)
+      },
       connections: gameScores.connections,
-      strands: `${gameScores.strands} ${bonusPoints.strandsSpanagram ? '+ 1 bonus' : ''}`,
-      baseTotal: baseScore,
-      bonusTotal: bonusScore,
+      strands: {
+        base: 1,
+        bonus: bonusPoints.strandsSpanagram,
+        total: gameScores.strands
+      },
       finalTotal: totalScore
     });
 
-    return { 
-      score: totalScore,
-      bonusPoints,
-      gameScores
-    };
+    return { score: totalScore, bonusPoints, gameScores };
   };
 
   const finalizeDayScores = async () => {
@@ -532,7 +551,9 @@ const PuzzleScoreboard: React.FC = () => {
         {/* Rules Section */}
         <Card className="mt-8 bg-gray-50">
           <CardHeader>
-            <CardTitle className="text-xl font-semibold text-gray-900">Game Rules & Scoring</CardTitle>
+            <CardTitle className="text-xl font-semibold text-gray-900">
+              Game Rules & Scoring
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
             <div>
