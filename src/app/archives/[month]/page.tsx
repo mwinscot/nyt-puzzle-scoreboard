@@ -4,22 +4,40 @@ import { PlayerScores } from '@/types';
 import Link from 'next/link';
 import { createClient } from '@supabase/supabase-js';
 
+// Initialize the Supabase client
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
-export default async function Page({ params }: { params: { month: string } }) {
-  const scores: PlayerScores = {
-    player1: { dailyScores: {}, total: 0, totalBonuses: { wordle: 0, connections: 0, strands: 0 } },
-    player2: { dailyScores: {}, total: 0, totalBonuses: { wordle: 0, connections: 0, strands: 0 } },
-    player3: { dailyScores: {}, total: 0, totalBonuses: { wordle: 0, connections: 0, strands: 0 } },
-    player4: { dailyScores: {}, total: 0, totalBonuses: { wordle: 0, connections: 0, strands: 0 } }
+// Force dynamic rendering to avoid static build issues
+export const dynamic = 'force-dynamic';
+export const fetchCache = 'force-no-store';
+
+// Helper function to initialize scores
+function initScores(): PlayerScores {
+  const emptyPlayerData = {
+    dailyScores: {},
+    total: 0,
+    totalBonuses: { wordle: 0, connections: 0, strands: 0 }
   };
+  
+  return {
+    player1: { ...emptyPlayerData },
+    player2: { ...emptyPlayerData },
+    player3: { ...emptyPlayerData },
+    player4: { ...emptyPlayerData }
+  };
+}
+
+// Main page component
+export default async function Page({ params }: { params: { month: string } }) {
+  const scores = initScores();
   
   try {
     const [year, month] = params.month.split('-').map(Number);
     const lastDay = new Date(year, month, 0).getDate();
+    
     const { data } = await supabase
       .from('daily_scores')
       .select('*, players (name)')
@@ -40,30 +58,33 @@ export default async function Page({ params }: { params: { month: string } }) {
           strands: score.strands || 0,
           total: score.total || 0,
           bonusPoints: {
-            wordleQuick: !!score.bonus_wordle,
-            connectionsPerfect: !!score.bonus_connections,
-            strandsSpanagram: !!score.bonus_strands
+            wordleQuick: Boolean(score.bonus_wordle),
+            connectionsPerfect: Boolean(score.bonus_connections),
+            strandsSpanagram: Boolean(score.bonus_strands)
           },
-          finalized: !!score.finalized
+          finalized: Boolean(score.finalized)
         };
 
         scores[playerKey].total += score.total || 0;
+        if (score.bonus_wordle) scores[playerKey].totalBonuses.wordle++;
+        if (score.bonus_connections) scores[playerKey].totalBonuses.connections++;
+        if (score.bonus_strands) scores[playerKey].totalBonuses.strands++;
       });
     }
   } catch (error) {
     console.error('Error fetching data:', error);
   }
 
-  const monthName = new Date(`${params.month}-01`).toLocaleString('default', { 
-    month: 'long', 
-    year: 'numeric' 
-  });
+  const monthDate = new Date(`${params.month}-01`);
+  const monthName = monthDate.toLocaleString('default', { month: 'long', year: 'numeric' });
 
   return (
     <div className="w-full max-w-4xl mx-auto p-6">
       <div className="flex justify-between items-center mb-8">
-        <h1 className="text-2xl font-bold">{monthName}</h1>
-        <Link href="/">Return to Current Month</Link>
+        <h1 className="text-2xl font-bold">{monthName} Archive</h1>
+        <Link href="/" className="text-blue-500 hover:text-blue-600">
+          Return to Current Month
+        </Link>
       </div>
 
       <TotalScoreHeader
