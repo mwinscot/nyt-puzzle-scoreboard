@@ -294,20 +294,17 @@ const PuzzleScoreboard: React.FC = () => {
       console.log('Wordle:', { base: gameScores.wordle, bonus: bonusPoints.wordleQuick });
     }
 
-    // Parse Connections with improved parsing
-    const connectionsText = sections.find(s => s.startsWith('Connections'));
+    // Fixed Connections parsing
     const puzzleText = sections.find(s => s.includes('Puzzle #'));
-    
-    if (connectionsText && puzzleText) {
-      // Get the lines containing moves (4 emojis)
+    if (puzzleText) {
+      // Get only the emoji lines
       const moves = puzzleText
         .split('\n')
-        .map(line => line.trim())
-        .filter(line => line.match(/^[🟪🟩🟨🟦]{4}$/));
+        .filter(line => /[🟪🟩🟨🟦]{4}/.test(line.trim()));
       
-      console.log('Connection moves found:', moves);
+      console.log('Connection moves:', moves);
       
-      // Check key conditions
+      // Check conditions
       const hasErrors = moves.some(line => line.includes('🟨'));
       const completed = moves.some(line => line.includes('🟩🟩🟩🟩'));
       const purpleIndex = moves.findIndex(line => line.includes('🟪🟪🟪🟪'));
@@ -318,19 +315,21 @@ const PuzzleScoreboard: React.FC = () => {
         hasErrors,
         completed,
         purpleIndex,
-        purpleFirst
+        purpleFirst,
+        moveCount: moves.length
       });
 
       if (completed) {
-        // Assign score based on performance
         if (!hasErrors) {
           gameScores.connections = purpleFirst ? 3 : 2;
-          console.log(`Perfect game${purpleFirst ? ' with purple first' : ''}: ${gameScores.connections} points`);
+          console.log('Perfect game:', gameScores.connections, 'points');
         } else {
           gameScores.connections = purpleFirst ? 2 : 1;
-          console.log(`Game with errors${purpleFirst ? ' but purple first' : ''}: ${gameScores.connections} points`);
+          console.log('Game with errors:', gameScores.connections, 'points');
         }
       }
+
+      console.log('Final Connections score:', gameScores.connections);
     }
 
     // Parse Strands with fixed scoring
