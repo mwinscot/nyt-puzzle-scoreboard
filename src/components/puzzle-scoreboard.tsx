@@ -271,83 +271,93 @@ const PuzzleScoreboard: React.FC = () => {
       strandsSpanagram: false
     };
 
-    // Split into sections
+    // Split into sections and clean up the input
     const sections = input.split(/\n(?=[A-Za-z])/);
     console.log('Sections:', sections);
 
-    // Parse Wordle (1 point + bonus for ≤3 lines)
+    // Parse Wordle (1 point for completion)
     const wordleSection = sections.find(s => s.startsWith('Wordle'));
     if (wordleSection) {
       const lines = wordleSection.split('\n');
-      const solutionLine = lines.findIndex(line => line.includes('🟩🟩🟩🟩🟩')) + 1;
+      const solutionLine = lines.findIndex(line => line.includes('🟩🟩🟩🟩🟩'));
       
-      if (solutionLine > 0) { // If solved
-        gameScores.wordle = 1;
+      if (solutionLine !== -1) {
+        gameScores.wordle = 1; // Base point for completing
         score += 1;
-        // Bonus point if solved in 3 or fewer tries
-        if (solutionLine <= 3) {
+        console.log('Added base Wordle point');
+
+        if (solutionLine <= 2) { // Index 2 = line 3
           bonusPoints.wordleQuick = true;
           score += 1;
+          console.log('Added Wordle bonus point');
         }
       }
-      console.log('Wordle:', { score: gameScores.wordle, line: solutionLine, bonus: bonusPoints.wordleQuick });
     }
 
-    // Parse Connections (1-3 points based on performance)
+    // Parse Connections
     const connectionsSection = sections.find(s => s.startsWith('Connections'));
     if (connectionsSection) {
       const lines = connectionsSection.split('\n');
       const moves = lines.filter(line => /[🟪🟩🟨🟦]{4}/.test(line));
       const purpleIndex = moves.findIndex(line => line.includes('🟪🟪🟪🟪'));
       const hasErrors = moves.some(line => line.includes('🟨'));
-      const gotPurpleFirst = purpleIndex === 0;
-      const completed = moves.some(line => line.includes('🟩🟩🟩🟩'));
 
-      if (completed) {
+      if (moves.length > 0) { // If there are any moves
         if (!hasErrors) {
-          if (gotPurpleFirst) {
-            gameScores.connections = 3; // Perfect with purple first
+          if (purpleIndex === 0) {
+            gameScores.connections = 3; // Purple first and perfect
             score += 3;
+            console.log('Added 3 points for perfect Connections with purple first');
           } else {
             gameScores.connections = 2; // Perfect but purple not first
             score += 2;
+            console.log('Added 2 points for perfect Connections');
           }
         } else {
-          if (gotPurpleFirst) {
-            gameScores.connections = 2; // Errors but purple first
+          if (purpleIndex === 0) {
+            gameScores.connections = 2; // Purple first but with errors
             score += 2;
+            console.log('Added 2 points for Connections with purple first but errors');
           } else {
             gameScores.connections = 1; // Completed with errors
             score += 1;
+            console.log('Added 1 point for completing Connections with errors');
           }
         }
       }
-      console.log('Connections:', { score: gameScores.connections, purpleFirst: gotPurpleFirst, hasErrors });
     }
 
-    // Parse Strands (1 point + bonus for spanagram)
+    // Parse Strands
     const strandsSection = sections.find(s => s.startsWith('Strands'));
     if (strandsSection) {
       const lines = strandsSection.split('\n').slice(2); // Skip title and puzzle name
-      const completed = lines.some(line => line.includes('🔵'));
+      const blueCircles = lines.map(line => (line.match(/🔵/g) || []).length);
       
-      if (completed) {
+      if (blueCircles.some(count => count > 0)) {
         gameScores.strands = 1;
         score += 1;
+        console.log('Added base Strands point');
         
         // Check for spanagram (3+ blue circles) in first three moves
-        const spanagramIndex = lines.findIndex(line => (line.match(/🔵/g) || []).length >= 3);
+        const spanagramIndex = blueCircles.findIndex(count => count >= 3);
         if (spanagramIndex !== -1 && spanagramIndex < 3) {
           bonusPoints.strandsSpanagram = true;
           score += 1;
+          console.log('Added Strands bonus point');
         }
       }
-      console.log('Strands:', { score: gameScores.strands, bonus: bonusPoints.strandsSpanagram });
     }
 
-    const result = { score, bonusPoints, gameScores };
-    console.log('Final calculated result:', result);
-    return result;
+    console.log('Final scores:', {
+      total: score,
+      gameScores,
+      bonusPoints,
+      breakdown: `Wordle: ${gameScores.wordle} + ${bonusPoints.wordleQuick ? '1' : '0'}, ` +
+                 `Connections: ${gameScores.connections}, ` +
+                 `Strands: ${gameScores.strands} + ${bonusPoints.strandsSpanagram ? '1' : '0'}`
+    });
+
+    return { score, bonusPoints, gameScores };
   };
 
   const finalizeDayScores = async () => {
