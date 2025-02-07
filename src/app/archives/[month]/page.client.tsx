@@ -14,15 +14,38 @@ export default function ArchivePageClient({ month }: { month: string }) {
     player3: { dailyScores: {}, total: 0, totalBonuses: { wordle: 0, connections: 0, strands: 0 } },
     player4: { dailyScores: {}, total: 0, totalBonuses: { wordle: 0, connections: 0, strands: 0 } }
   });
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const monthName = new Date(`${month}-01`).toLocaleString('default', { month: 'long', year: 'numeric' });
 
   useEffect(() => {
+    setIsLoading(true);
+    setError(null);
+    
     fetch(`/api/scores?month=${month}`)
-      .then(res => res.json())
-      .then(data => setScores(data))
-      .catch(console.error);
+      .then(res => {
+        if (!res.ok) throw new Error('Failed to fetch scores');
+        return res.json();
+      })
+      .then(data => {
+        console.log('Received scores:', data);
+        setScores(data);
+      })
+      .catch(err => {
+        console.error('Error fetching scores:', err);
+        setError(err.message);
+      })
+      .finally(() => setIsLoading(false));
   }, [month]);
+
+  if (isLoading) {
+    return <div className="w-full max-w-4xl mx-auto p-6">Loading scores...</div>;
+  }
+
+  if (error) {
+    return <div className="w-full max-w-4xl mx-auto p-6 text-red-500">Error: {error}</div>;
+  }
 
   return (
     <div className="w-full max-w-4xl mx-auto p-6">

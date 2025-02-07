@@ -47,6 +47,8 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const month = searchParams.get('month');
 
+  console.log('API Request for month:', month);
+
   if (!month || !/^\d{4}-\d{2}$/.test(month)) {
     return NextResponse.json({ error: 'Invalid month' }, { status: 400 });
   }
@@ -54,11 +56,18 @@ export async function GET(request: Request) {
   const [year, monthNum] = month.split('-').map(Number);
   const lastDay = new Date(year, monthNum, 0).getDate();
 
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('daily_scores')
     .select('*, players (name)')
     .gte('date', `${month}-01`)
     .lte('date', `${month}-${String(lastDay).padStart(2, '0')}`);
+
+  if (error) {
+    console.error('Supabase error:', error);
+    return NextResponse.json({ error: 'Database error' }, { status: 500 });
+  }
+
+  console.log('Found scores:', data?.length);
 
   const scores = initScores();
 
