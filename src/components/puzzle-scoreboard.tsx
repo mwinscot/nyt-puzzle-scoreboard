@@ -347,9 +347,30 @@ const PuzzleScoreboard: React.FC = () => {
               <ArchiveButton onArchiveComplete={fetchAllScores} />
             </div>
 
-            {/* Last Updates Section */}
+            {/* Add Last Updates Section */}
             <div className="mb-6 bg-gray-50 rounded-lg p-4 shadow">
-              {/* ...existing last updates code... */}
+              <h3 className="text-lg font-semibold mb-3 text-gray-700">Last Updates</h3>
+              <div className="grid grid-cols-4 gap-4">
+                {Object.entries(getLastUpdates()).map(([name, data]) => (
+                  <div key={name} className="text-sm">
+                    <div className="font-medium text-gray-900">{name}</div>
+                    {data.date ? (
+                      <>
+                        <div className="text-gray-600">
+                          {data.displayDate.toLocaleDateString('en-US', {
+                            timeZone: 'America/Los_Angeles',
+                            month: 'numeric',
+                            day: 'numeric'
+                          })}
+                        </div>
+                        <div className="text-gray-800">Score: {data.score}</div>
+                      </>
+                    ) : (
+                      <div className="text-gray-400">No entries yet</div>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
 
             <div className="mb-4 space-y-2">
