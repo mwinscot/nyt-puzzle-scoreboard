@@ -321,58 +321,56 @@ const PuzzleScoreboard: React.FC = () => {
     if (puzzleText) {
       // Split into lines and remove empty lines
       const allLines = puzzleText.split('\n').map(line => line.trim()).filter(Boolean);
-      console.log('All lines:', allLines);
-
+      
       // Find game lines (lines containing emoji squares)
       const gameLines = allLines.filter(line => 
         /[🟪🟩🟨🟦]/.test(line)
       );
-      
-      console.log('Game lines:', gameLines);
 
-      // Check each line for mistakes (mixed colors)
-      const hasErrors = gameLines.some(line => {
-        const colors = line.match(/[🟪🟩🟨🟦]/g);
-        if (!colors) return false;
-        return !colors.every(color => color === colors[0]);
-      });
-
-      // Check for completion (found all 4 groups)
+      // Check for completion (all perfect groups found) and check final line
       const perfectGroups = gameLines.filter(line => 
         line === '🟪🟪🟪🟪' || 
         line === '🟩🟩🟩🟩' || 
         line === '🟨🟨🟨🟨' || 
         line === '🟦🟦🟦🟦'
       );
+
+      const lastLine = gameLines[gameLines.length - 1] || '';
+      const isLastLinePerfect = lastLine === '🟪🟪🟪🟪' || 
+                               lastLine === '🟩🟩🟩🟩' || 
+                               lastLine === '🟨🟨🟨🟨' || 
+                               lastLine === '🟦🟦🟦🟦';
       
-      const completed = perfectGroups.length === 4;
-      // Correct the purple first check
+      const completed = perfectGroups.length === 4 && isLastLinePerfect;
       const purpleFirst = gameLines.length > 0 && gameLines[0] === '🟪🟪🟪🟪';
+      const hasErrors = gameLines.some(line => {
+        const colors = line.match(/[🟪🟩🟨🟦]/g);
+        if (!colors) return false;
+        return !colors.every(color => color === colors[0]);
+      });
 
       console.log('Connections state:', {
         completed,
         hasErrors,
         purpleFirst,
-        gameLines,
+        lastLine,
+        isLastLinePerfect,
         perfectGroups
       });
 
-      // Simplified scoring logic
-      if (completed) {
-        if (!hasErrors && purpleFirst) {
-          gameScores.connections = 3;
-          bonusPoints.connectionsPerfect = true;
-          console.log('Perfect game with purple first: 3 points');
-        } else if (!hasErrors) {
-          gameScores.connections = 2;
-          console.log('Perfect game without purple first: 2 points');
-        } else {
-          gameScores.connections = 1;
-          console.log('Completed with errors: 1 point');
-        }
-      } else {
+      if (!completed || !isLastLinePerfect) {
         gameScores.connections = 0;
-        console.log('Game incomplete: 0 points');
+        console.log('Game incomplete or invalid final line: 0 points');
+      } else if (purpleFirst && !hasErrors) {
+        gameScores.connections = 3;
+        bonusPoints.connectionsPerfect = true;
+        console.log('Purple first, no errors: 3 points');
+      } else if (purpleFirst || !hasErrors) {
+        gameScores.connections = 2;
+        console.log('Purple first with errors OR perfect game without purple first: 2 points');
+      } else {
+        gameScores.connections = 1;
+        console.log('Completed with errors, no purple first: 1 point');
       }
 
       console.log('Final Connections score:', gameScores.connections);
