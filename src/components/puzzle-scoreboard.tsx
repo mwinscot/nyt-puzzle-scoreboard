@@ -323,31 +323,53 @@ const PuzzleScoreboard: React.FC = () => {
       const allLines = puzzleText.split('\n').map(line => line.trim()).filter(Boolean);
       console.log('All lines:', allLines);
 
-      // Find lines that contain exactly 4 emojis of the same color
-      const moves = allLines.filter(line => 
+      // Find game lines (lines containing emoji squares)
+      const gameLines = allLines.filter(line => 
+        /[🟪🟩🟨🟦]/.test(line)
+      );
+      
+      console.log('Game lines:', gameLines);
+
+      // Check each line for mistakes (mixed colors)
+      const hasErrors = gameLines.some(line => {
+        const colors = line.match(/[🟪🟩🟨🟦]/g);
+        if (!colors) return false;
+        return !colors.every(color => color === colors[0]);
+      });
+
+      // Check for completion (found all 4 groups)
+      const perfectGroups = gameLines.filter(line => 
         line === '🟪🟪🟪🟪' || 
         line === '🟩🟩🟩🟩' || 
         line === '🟨🟨🟨🟨' || 
         line === '🟦🟦🟦🟦'
       );
       
-      console.log('Found moves:', moves);
-
-      // Simple scoring conditions
-      const completed = moves.length === 4;
-      const hasErrors = false; // Since we only capture perfect groups
-      const purpleFirst = moves[0] === '🟪🟪🟪🟪';
+      // Check if last attempt is a perfect group
+      const lastLine = gameLines[gameLines.length - 1] || '';
+      const isLastLinePerfect = lastLine === '🟪🟪🟪🟪' || 
+                               lastLine === '🟩🟩🟩🟩' || 
+                               lastLine === '🟨🟨🟨🟨' || 
+                               lastLine === '🟦🟦🟦🟦';
+      
+      const completed = perfectGroups.length === 4;
+      const purpleFirst = gameLines[0] === '🟪🟪🟪🟪';
 
       console.log('Connections state:', {
         completed,
         hasErrors,
         purpleFirst,
-        moveCount: moves.length,
-        firstMove: moves[0]
+        gameLines,
+        perfectGroups,
+        lastLine,
+        isLastLinePerfect
       });
 
-      if (completed) {
-        if (purpleFirst) {
+      if (completed && isLastLinePerfect) {
+        if (hasErrors) {
+          gameScores.connections = 1;
+          console.log('Completed with errors: 1 point');
+        } else if (purpleFirst) {
           gameScores.connections = 3;
           bonusPoints.connectionsPerfect = true;
           console.log('Perfect game with purple first: 3 points');
@@ -355,6 +377,9 @@ const PuzzleScoreboard: React.FC = () => {
           gameScores.connections = 2;
           console.log('Perfect game without purple first: 2 points');
         }
+      } else {
+        gameScores.connections = 0;
+        console.log('Last line was not perfect or game incomplete: 0 points');
       }
 
       console.log('Final Connections score:', gameScores.connections);
