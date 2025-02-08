@@ -302,63 +302,44 @@ const PuzzleScoreboard: React.FC = () => {
     // Connections scoring logic
     const puzzleText = sections.find(s => s.includes('Puzzle #'));
     if (puzzleText) {
-      console.log('Raw puzzle text:', puzzleText);
-      
-      // First split by newlines and clean each line
-      const allLines = puzzleText
-        .split('\n')
+      // Split by newlines and get only the actual game moves (4 squares)
+      const gameLines = puzzleText.split('\n')
         .map(line => line.trim())
-        .filter(Boolean); // Remove empty lines
-      
-      console.log('All lines after splitting:', allLines);
-      
-      // Extract only the game lines (exactly 4 colored squares)
-      const gameLines = allLines.filter(line => {
-        // More precise regex to match exactly 4 colored squares
-        return /^[🟪🟩🟨🟦]{4}$/.test(line);
-      });
+        .filter(line => {
+          // Match exactly 4 colored squares with nothing else
+          return /^[🟪🟩🟨🟦]{4}$/.test(line);
+        });
 
-      console.log('Game lines found:', gameLines);
-
+      // Check game state
       const completed = gameLines.length === 4;
-      const purpleFirst = gameLines.length > 0 && gameLines[0] === '🟪🟪🟪🟪';
-      
-      // Check for errors (mixed colors in any line)
+      const purpleFirst = completed && gameLines[0] === '🟪🟪🟪🟪';
       const hasErrors = gameLines.some(line => {
-        const firstChar = line[0];
-        return Array.from(line).some(char => char !== firstChar);
+        const firstSquare = line[0];
+        const squares = Array.from(line); // Convert to array for proper iteration
+        return squares.some(square => square !== firstSquare);
       });
 
-      console.log('Game state:', {
+      console.log('Connections analysis:', {
         completed,
         purpleFirst,
         hasErrors,
         gameLines,
-        linesFound: gameLines.length
+        firstLine: gameLines[0]
       });
 
       // Scoring logic
-      if (completed) {
-        // Always award 3 points for purple first and no errors
-        if (purpleFirst && !hasErrors) {
-          gameScores.connections = 3;
-          bonusPoints.connectionsPerfect = true;
-          console.log('Perfect game with purple first: 3 points');
-        }
-        // Award 2 points for either purple first with errors or perfect without purple first
-        else if (purpleFirst || !hasErrors) {
-          gameScores.connections = 2;
-          console.log('Either purple first or perfect: 2 points');
-        }
-        // Award 1 point for completion with errors
-        else {
-          gameScores.connections = 1;
-          console.log('Completed with errors: 1 point');
-        }
-      } else {
+      if (!completed) {
         gameScores.connections = 0;
-        console.log('Incomplete game: 0 points');
+      } else if (purpleFirst && !hasErrors) {
+        gameScores.connections = 3;
+        bonusPoints.connectionsPerfect = true;
+      } else if (purpleFirst || !hasErrors) {
+        gameScores.connections = 2;
+      } else {
+        gameScores.connections = 1;
       }
+
+      console.log('Connections final score:', gameScores.connections);
     }
 
     // Strands scoring logic
@@ -585,7 +566,7 @@ const PuzzleScoreboard: React.FC = () => {
                 <li>1 point for completing the puzzle with errors</li>
                 <li>2 points for completing the puzzle with no errors</li>
                 <li>3 points if you get purple first and complete with no errors</li>
-                <li>2 points if you get purple first but with errors</li>
+                <li>2 points if you get purple first but have errors</li>
               </ul>
             </div>
 
