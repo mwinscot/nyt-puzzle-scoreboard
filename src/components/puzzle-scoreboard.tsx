@@ -327,7 +327,7 @@ const PuzzleScoreboard: React.FC = () => {
         /[🟪🟩🟨🟦]/.test(line)
       );
 
-      // Check for completion (all perfect groups found) and check final line
+      // Check for completion and last line validity
       const perfectGroups = gameLines.filter(line => 
         line === '🟪🟪🟪🟪' || 
         line === '🟩🟩🟩🟩' || 
@@ -340,8 +340,8 @@ const PuzzleScoreboard: React.FC = () => {
                                lastLine === '🟩🟩🟩🟩' || 
                                lastLine === '🟨🟨🟨🟨' || 
                                lastLine === '🟦🟦🟦🟦';
-      
-      const completed = perfectGroups.length === 4 && isLastLinePerfect;
+
+      const completed = perfectGroups.length === 4;
       const purpleFirst = gameLines.length > 0 && gameLines[0] === '🟪🟪🟪🟪';
       const hasErrors = gameLines.some(line => {
         const colors = line.match(/[🟪🟩🟨🟦]/g);
@@ -351,23 +351,27 @@ const PuzzleScoreboard: React.FC = () => {
 
       console.log('Connections state:', {
         completed,
-        hasErrors,
         purpleFirst,
+        hasErrors,
+        perfectGroups: perfectGroups.length,
         lastLine,
-        isLastLinePerfect,
-        perfectGroups
+        isLastLinePerfect
       });
 
+      // Updated scoring logic
       if (!completed || !isLastLinePerfect) {
         gameScores.connections = 0;
         console.log('Game incomplete or invalid final line: 0 points');
       } else if (purpleFirst && !hasErrors) {
         gameScores.connections = 3;
         bonusPoints.connectionsPerfect = true;
-        console.log('Purple first, no errors: 3 points');
-      } else if (purpleFirst || !hasErrors) {
+        console.log('Perfect game with purple first: 3 points');
+      } else if (purpleFirst && hasErrors) {
         gameScores.connections = 2;
-        console.log('Purple first with errors OR perfect game without purple first: 2 points');
+        console.log('Purple first but with errors: 2 points');
+      } else if (!hasErrors) {
+        gameScores.connections = 2;
+        console.log('Perfect game without purple first: 2 points');
       } else {
         gameScores.connections = 1;
         console.log('Completed with errors, no purple first: 1 point');
