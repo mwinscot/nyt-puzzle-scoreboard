@@ -302,44 +302,57 @@ const PuzzleScoreboard: React.FC = () => {
     // Connections scoring logic
     const puzzleText = sections.find(s => s.includes('Puzzle #'));
     if (puzzleText) {
-      // Split by newlines and get only the actual game moves (4 squares)
+      console.log('Processing Connections:', puzzleText);
+      
+      // Extract only the game lines with emoji squares
       const gameLines = puzzleText.split('\n')
         .map(line => line.trim())
         .filter(line => {
-          // Match exactly 4 colored squares with nothing else
-          return /^[🟪🟩🟨🟦]{4}$/.test(line);
+          // Count colored squares in the line
+          const purpleCount = (line.match(/🟪/g) || []).length;
+          const greenCount = (line.match(/🟩/g) || []).length;
+          const yellowCount = (line.match(/🟨/g) || []).length;
+          const blueCount = (line.match(/🟦/g) || []).length;
+          
+          // Line must have exactly 4 squares of the same color
+          return (purpleCount === 4) || (greenCount === 4) || 
+                 (yellowCount === 4) || (blueCount === 4);
         });
 
-      // Check game state
+      console.log('Found game lines:', gameLines);
+
       const completed = gameLines.length === 4;
       const purpleFirst = completed && gameLines[0] === '🟪🟪🟪🟪';
       const hasErrors = gameLines.some(line => {
         const firstSquare = line[0];
-        const squares = Array.from(line); // Convert to array for proper iteration
-        return squares.some(square => square !== firstSquare);
+        return Array.from(line).some(square => square !== firstSquare);
       });
 
-      console.log('Connections analysis:', {
+      console.log('Game analysis:', {
         completed,
         purpleFirst,
         hasErrors,
-        gameLines,
-        firstLine: gameLines[0]
+        lineCount: gameLines.length,
+        lines: gameLines
       });
 
       // Scoring logic
       if (!completed) {
         gameScores.connections = 0;
+        console.log('Game incomplete: 0 points');
       } else if (purpleFirst && !hasErrors) {
         gameScores.connections = 3;
         bonusPoints.connectionsPerfect = true;
+        console.log('Perfect game with purple first: 3 points');
       } else if (purpleFirst || !hasErrors) {
         gameScores.connections = 2;
+        console.log('Either purple first or perfect: 2 points');
       } else {
         gameScores.connections = 1;
+        console.log('Completed with errors: 1 point');
       }
 
-      console.log('Connections final score:', gameScores.connections);
+      console.log('Final Connections score:', gameScores.connections);
     }
 
     // Strands scoring logic
