@@ -345,41 +345,34 @@ const PuzzleScoreboard: React.FC = () => {
         line === '🟦🟦🟦🟦'
       );
       
-      // Check if last attempt is a perfect group
-      const lastLine = gameLines[gameLines.length - 1] || '';
-      const isLastLinePerfect = lastLine === '🟪🟪🟪🟪' || 
-                               lastLine === '🟩🟩🟩🟩' || 
-                               lastLine === '🟨🟨🟨🟨' || 
-                               lastLine === '🟦🟦🟦🟦';
-      
       const completed = perfectGroups.length === 4;
-      const purpleFirst = gameLines[0] === '🟪🟪🟪🟪';
+      // Correct the purple first check
+      const purpleFirst = gameLines.length > 0 && gameLines[0] === '🟪🟪🟪🟪';
 
       console.log('Connections state:', {
         completed,
         hasErrors,
         purpleFirst,
         gameLines,
-        perfectGroups,
-        lastLine,
-        isLastLinePerfect
+        perfectGroups
       });
 
-      if (completed && isLastLinePerfect) {
-        if (hasErrors) {
-          gameScores.connections = 1;
-          console.log('Completed with errors: 1 point');
-        } else if (purpleFirst) {
+      // Simplified scoring logic
+      if (completed) {
+        if (!hasErrors && purpleFirst) {
           gameScores.connections = 3;
           bonusPoints.connectionsPerfect = true;
           console.log('Perfect game with purple first: 3 points');
-        } else {
+        } else if (!hasErrors) {
           gameScores.connections = 2;
           console.log('Perfect game without purple first: 2 points');
+        } else {
+          gameScores.connections = 1;
+          console.log('Completed with errors: 1 point');
         }
       } else {
         gameScores.connections = 0;
-        console.log('Last line was not perfect or game incomplete: 0 points');
+        console.log('Game incomplete: 0 points');
       }
 
       console.log('Final Connections score:', gameScores.connections);
