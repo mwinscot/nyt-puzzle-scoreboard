@@ -281,147 +281,96 @@ const PuzzleScoreboard: React.FC = () => {
     const sections = input.split(/\n(?=[A-Za-z])/);
     console.log('Sections:', sections);
 
-    // Fixed Wordle scoring logic
+    // Wordle scoring logic
     const wordleSection = sections.find(s => s.startsWith('Wordle'));
     if (wordleSection) {
       gameScores.wordle = 1; // Base point for completing
       
-      // Split lines and remove empty ones
       const lines = wordleSection.split('\n')
         .map(line => line.trim())
-        .filter(Boolean);
+        .filter(line => /[🟩🟨⬜]/g.test(line)); // Only count game lines
       
-      console.log('Wordle lines:', lines);
-      
-      // Count actual moves (lines with squares)
-      const actualMoves = lines.filter(line => /[🟩🟨⬜]/g.test(line));
-      
-      console.log('Wordle analysis:', {
-        lines,
-        actualMoves,
-        moveCount: actualMoves.length
-      });
+      console.log('Wordle move count:', lines.length);
 
-      // Award bonus point if solved in 3 or fewer actual moves
-      if (actualMoves.length <= 3) {
+      if (lines.length <= 3) {
         bonusPoints.wordleQuick = true;
-        gameScores.wordle++; // Add bonus point to wordle score
-        console.log('Quick solve bonus awarded, wordle score increased to 2');
+        gameScores.wordle++; // Add bonus point
+        console.log('Wordle quick solve bonus awarded');
       }
-
-      console.log('Wordle final:', {
-        base: 1,
-        bonus: bonusPoints.wordleQuick,
-        total: gameScores.wordle
-      });
     }
 
-    // Fixed Connections scoring logic
+    // Connections scoring logic
     const puzzleText = sections.find(s => s.includes('Puzzle #'));
     if (puzzleText) {
-      // Split into lines and remove empty lines
-      const allLines = puzzleText.split('\n').map(line => line.trim()).filter(Boolean);
-      
-      // Find game lines (lines containing emoji squares)
-      const gameLines = allLines.filter(line => 
-        /[🟪🟩🟨🟦]/.test(line)
-      );
+      const gameLines = puzzleText.split('\n')
+        .map(line => line.trim())
+        .filter(line => /^[🟪🟩🟨🟦]{4}$/.test(line)); // Only match complete color lines
 
-      // Check for purple first
-      const purpleFirst = gameLines[0] === '🟪🟪🟪🟪';
-
-      // Check if all lines are uniform (no mixed colors)
-      const hasErrors = gameLines.some(line => {
-        const colors = line.split('');
-        return !colors.every(c => c === colors[0]);
-      });
-
-      // Check if game is complete (4 lines)
       const completed = gameLines.length === 4;
+      const purpleFirst = gameLines[0] === '🟪🟪🟪🟪';
+      const hasErrors = gameLines.some(line => {
+        const firstColor = line[0];
+        return [...line].some(c => c !== firstColor);
+      });
 
       console.log('Connections analysis:', {
         completed,
         purpleFirst,
         hasErrors,
-        gameLines,
-        numLines: gameLines.length
+        gameLines
       });
 
-      // Scoring logic - prioritize purple first with no errors
-      if (!completed) {
-        gameScores.connections = 0;
-        console.log('Game incomplete: 0 points');
-      } else {
+      if (completed) {
         if (purpleFirst && !hasErrors) {
           gameScores.connections = 3;
           bonusPoints.connectionsPerfect = true;
-          console.log('Purple first and perfect: 3 points');
+          console.log('Connections: 3 points (purple first, no errors)');
         } else if (purpleFirst) {
           gameScores.connections = 2;
-          console.log('Purple first with errors: 2 points');
+          console.log('Connections: 2 points (purple first with errors)');
         } else if (!hasErrors) {
           gameScores.connections = 2;
-          console.log('Perfect without purple first: 2 points');
+          console.log('Connections: 2 points (perfect but not purple first)');
         } else {
           gameScores.connections = 1;
-          console.log('Completed with errors: 1 point');
+          console.log('Connections: 1 point (completed with errors)');
         }
       }
-
-      console.log('Final Connections score:', gameScores.connections);
     }
 
-    // Fixed Strands section check
-    const strandsSection = sections.find(section => section.startsWith('Strands'));
+    // Strands scoring logic
+    const strandsSection = sections.find(s => s.startsWith('Strands'));
     if (strandsSection) {
-      gameScores.strands = 1; // Base score
+      gameScores.strands = 1; // Base score for completion
       
-      // Split lines and get only the game lines (skip header and title)
-      const lines = strandsSection.split('\n')
+      const gameLines = strandsSection.split('\n')
         .map(line => line.trim())
-        .filter(line => line.includes('🟡') || line.includes('🔵')); // Only game moves
+        .filter(line => line.includes('🟡') || line.includes('🔵'));
       
-      console.log('Strands all moves:', lines);
-      
-      // Check first line for yellow circles
-      const firstLine = lines[0] || '';
-      const yellowCount = (firstLine.match(/🟡/g) || []).length;
-      
-      console.log('Strands analysis:', {
-        firstLine,
-        yellowCount,
-        allMoves: lines
-      });
-
-      if (yellowCount >= 1) {
-        bonusPoints.strandsSpanagram = true;
-        gameScores.strands = 2;
-        console.log('Yellow circle found in first move: +1 bonus point');
+      if (gameLines.length > 0) {
+        const firstLine = gameLines[0];
+        const hasYellow = firstLine.includes('🟡');
+        
+        if (hasYellow) {
+          bonusPoints.strandsSpanagram = true;
+          gameScores.strands++; // Add bonus point
+          console.log('Strands spanagram bonus awarded');
+        }
       }
-
-      console.log('Strands final:', {
-        baseScore: 1,
-        bonus: bonusPoints.strandsSpanagram,
-        totalScore: gameScores.strands
-      });
     }
 
-    // Fixed total score calculation - remove the extra bonus count since it's already in gameScores
     const totalScore = gameScores.wordle + gameScores.connections + gameScores.strands;
     
-    console.log('Final score calculation:', {
-      baseComponents: {
-        wordle: gameScores.wordle,      // Already includes bonus
-        connections: gameScores.connections,
-        strands: gameScores.strands,
-        baseTotal: totalScore
-      },
+    console.log('Final scores:', {
+      wordle: gameScores.wordle,
+      connections: gameScores.connections,
+      strands: gameScores.strands,
+      total: totalScore,
       bonuses: {
-        wordle: bonusPoints.wordleQuick,
-        connections: bonusPoints.connectionsPerfect,
-        strands: bonusPoints.strandsSpanagram
-      },
-      totalScore
+        wordleQuick: bonusPoints.wordleQuick,
+        connectionsPerfect: bonusPoints.connectionsPerfect,
+        strandsSpanagram: bonusPoints.strandsSpanagram
+      }
     });
 
     return { score: totalScore, bonusPoints, gameScores };
