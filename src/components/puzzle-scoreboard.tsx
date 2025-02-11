@@ -258,9 +258,62 @@ const PuzzleScoreboard: React.FC = () => {
     }
   };
  
+  const processConnections = (input: string): { score: number; perfect: boolean } => {
+    // Split into sections by game headers
+    const sections = input.split(/\n(?=(?:Connections|Wordle|Strands))/);
+    const connectionsSection = sections.find(s => s.startsWith('Connections'));
+
+    if (!connectionsSection) return { score: 0, perfect: false };
+
+    // Get lines after "Puzzle #"
+    const lines = connectionsSection.split('\n')
+      .map(l => l.trim())
+      .filter(Boolean);
+
+    // Extract game lines
+    const gameLines: string[] = [];
+    let foundPuzzle = false;
+
+    for (const line of lines) {
+      if (line.includes('Puzzle #')) {
+        foundPuzzle = true;
+        continue;
+      }
+      if (foundPuzzle) {
+        // Only collect lines with exactly 4 colored squares
+        const squares = [...line].filter(c => ['🟪','🟨','🟦','🟩'].includes(c));
+        if (squares.length === 4) {
+          gameLines.push(squares.join(''));
+        }
+      }
+    }
+
+    // Only process if we have exactly 4 lines
+    if (gameLines.length === 4) {
+      // Check for perfect purple-first game
+      const isPerfectPurpleFirst = 
+        gameLines[0] === '🟪🟪🟪🟪' &&
+        gameLines[1] === '🟨🟨🟨🟨' &&
+        gameLines[2] === '🟦🟦🟦🟦' &&
+        gameLines[3] === '🟩🟩🟩🟩';
+
+      if (isPerfectPurpleFirst) {
+        return { score: 3, perfect: true };
+      }
+
+      // Check if each line is all same color
+      const isPerfect = gameLines.every(line => {
+        const firstChar = line[0];
+        return line === firstChar.repeat(4);
+      });
+
+      return { score: isPerfect ? 2 : 1, perfect: false };
+    }
+
+    return { score: 0, perfect: false };
+  };
+
   const calculateScores = (input: string): ScoreCalculationResult => {
-    console.log('Raw input:', input);
-    
     const gameScores: GameScores = {
       wordle: 0,
       connections: 0,
@@ -272,67 +325,114 @@ const PuzzleScoreboard: React.FC = () => {
       strandsSpanagram: false
     };
 
-    // Split sections more reliably by looking for game headers
-    const sections = input.split(/\n(?=(?:Wordle|Connections|Strands))/);
-    console.log('Split sections:', sections);
+    // Split into sections by game headers
+    const sections = input.split(/\n(?=(?:Connections|Wordle|Strands))/);
+    console.log('Found sections:', sections.map(s => s.split('\n')[0]));
+
+    // Process Connections
+    const connectionsSection = sections.find(s => s.startsWith('Connections'));
+    if (connectionsSection) {
+      console.log('Raw Connections section:\n', connectionsSection);
+      
+      const lines = connectionsSection.split('\n')
+        .map(l => l.trim())
+        .filter(Boolean);
+
+      // Get game lines after "Puzzle #" line
+      const gameLines: string[] = [];
+      let foundPuzzle = false;
+
+      for (const line of lines) {
+        if (line.includes('Puzzle #')) {
+          foundPuzzle = true;
+          console.log('Found puzzle line:', line);
+          continue;
+        }
+        if (foundPuzzle) {
+          // Only collect lines with exactly 4 colored squares
+          const squares = [...line].filter(c => ['🟪','🟨','🟦','🟩'].includes(c));
+          if (squares.length === 4) {
+            const gameLine = squares.join('');
+            gameLines.push(gameLine);
+            console.log('Found game line:', gameLine);
+          }
+        }
+      }
+
+      console.log('Extracted game lines:', gameLines);
+
+      // Only process if we have exactly 4 lines
+      if (gameLines.length === 4) {
+        // First check if all lines are perfect (same color)
+        const allPerfect = gameLines.every(line => {
+          const firstChar = line[0];
+          return line === firstChar.repeat(4);
+        });
+
+        if (allPerfect) {
+          // Then check if it's in purple-first sequence
+          const isPurpleFirst = 
+            gameLines[0] === '🟪🟪🟪🟪' &&
+            gameLines[1] === '🟨🟨🟨🟨' &&
+            gameLines[2] === '🟦🟦🟦🟦' &&
+            gameLines[3] === '🟩🟩🟩🟩';
+
+          if (isPurpleFirst) {
+            gameScores.connections = 3;
+            bonusPoints.connectionsPerfect = true;
+          } else {
+            gameScores.connections = 2;
+          }
+        } else {
+          gameScores.connections = 1;
+        }
+      }
+
+      console.log('Final Connections score:', {
+        score: gameScores.connections,
+        perfect: bonusPoints.connectionsPerfect
+      });
+    }
 
     // Process Wordle section
     const wordleSection = sections.find(s => s.startsWith('Wordle'));
-    // ...existing code for Wordle...
+    if (wordleSection) {
+      const lines = wordleSection.split('\n')
+        .map(l => l.trim())
+        .filter(l => l.includes('⬜') || l.includes('🟨') || l.includes('🟩'));
 
-    // Process Connections section
-    const connectionsText = sections.find(s => s.includes('Puzzle #'));
-    if (connectionsText) {
-      // First, check for a perfect game with purple first
-      const lines = connectionsText.split('\n');
-      const squareLines = lines.filter(line => /^[🟪🟨🟦🟩]{4}$/.test(line.trim()));
-      
-      const isPerfect = squareLines.length === 4 && 
-                       squareLines.every(line => /^(.)\1{3}$/.test(line));
-      const isPurpleFirst = squareLines[0]?.startsWith('🟪🟪🟪🟪');
-      const isCompleted = squareLines.length === 4;
-
-      // Simplified scoring logic
-      if (!isCompleted) {
-        gameScores.connections = 0;
-      } else if (isPerfect && isPurpleFirst) {
-        gameScores.connections = 3;
-        bonusPoints.connectionsPerfect = true;
-      } else if (isPerfect) {
-        gameScores.connections = 2;
-      } else {
-        gameScores.connections = 1;
+      if (lines.length > 0) {
+        gameScores.wordle = 1; // Base point for completion
+        if (lines.length <= 3) {
+          gameScores.wordle += 1; // Bonus point for 3 or fewer lines
+          bonusPoints.wordleQuick = true;
+        }
       }
-
-      console.log('Connections analysis:', {
-        squareLines,
-        isPerfect,
-        isPurpleFirst,
-        score: gameScores.connections
-      });
     }
 
     // Process Strands section
     const strandsSection = sections.find(s => s.startsWith('Strands'));
-    // ...existing code for Strands...
+    if (strandsSection) {
+      const lines = strandsSection.split('\n')
+        .map(l => l.trim())
+        .filter(l => l.includes('🔵') || l.includes('🟡'));
 
-    const totalScore = (
-      Number(gameScores.wordle) + 
-      Number(gameScores.connections) + 
-      Number(gameScores.strands)
-    );
-    
-    console.log('Final scores:', {
-      wordle: gameScores.wordle,
-      connections: gameScores.connections,
-      strands: gameScores.strands,
-      total: totalScore,
-      bonuses: bonusPoints
-    });
+      if (lines.length > 0) {
+        gameScores.strands = 1; // Base point for completion
+        // Check for spanagram in first 3 moves
+        const firstThreeLines = lines.slice(0, 3);
+        const foundSpanagram = firstThreeLines.some(line => line === '🔵🔵🔵🔵');
+        if (foundSpanagram) {
+          gameScores.strands += 1;
+          bonusPoints.strandsSpanagram = true;
+        }
+      }
+    }
 
+    const totalScore = gameScores.wordle + gameScores.connections + gameScores.strands;
     return { score: totalScore, bonusPoints, gameScores };
   };
-
+ 
   const finalizeDayScores = async () => {
     if (!isAdmin) return;
     
@@ -539,4 +639,3 @@ const PuzzleScoreboard: React.FC = () => {
 };
 
 export default PuzzleScoreboard;
-  
