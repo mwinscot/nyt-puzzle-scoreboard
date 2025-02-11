@@ -322,10 +322,11 @@ const PuzzleScoreboard: React.FC = () => {
       console.log('Found game lines:', gameLines);
 
       const completed = gameLines.length === 4;
-      const purpleFirst = completed && /^🟪🟪🟪🟪/.test(gameLines[0]);
+      const purpleFirst = completed && gameLines[0] && /^🟪🟪🟪🟪/.test(gameLines[0]);
       const hasErrors = gameLines.some(line => {
+        if (!line) return true;
         const firstSquare = line[0];
-        return !line || Array.from(line).some(square => square !== firstSquare);
+        return Array.from(line).some(square => square !== firstSquare);
       });
 
       console.log('Game analysis:', {
@@ -336,20 +337,16 @@ const PuzzleScoreboard: React.FC = () => {
         lines: gameLines
       });
 
-      // Scoring logic
+      // Determine score based on conditions
       if (!completed) {
         gameScores.connections = 0;
-        console.log('Game incomplete: 0 points');
       } else if (purpleFirst && !hasErrors) {
         gameScores.connections = 3;
         bonusPoints.connectionsPerfect = true;
-        console.log('Perfect game with purple first: 3 points');
       } else if (!hasErrors) {
         gameScores.connections = 2;
-        console.log('Perfect but purple not first: 2 points');
       } else {
         gameScores.connections = 1;
-        console.log('Completed with errors: 1 point');
       }
 
       console.log('Final Connections score:', gameScores.connections);
@@ -358,12 +355,17 @@ const PuzzleScoreboard: React.FC = () => {
     // Strands scoring logic
     const strandsSection = sections.find(s => s.startsWith('Strands'));
     if (strandsSection) {
+      console.log('Processing Strands:', strandsSection);
+      
       gameScores.strands = 1; // Base score for completion
       
       const gameLines = strandsSection.split('\n')
         .map(line => line.trim())
         .filter(line => line.includes('🟡') || line.includes('🔵'));
       
+      console.log('Strands game lines:', gameLines);
+      
+      // First non-empty line contains yellow for spanagram bonus
       if (gameLines.length > 0) {
         const firstLine = gameLines[0];
         const hasYellow = firstLine.includes('🟡');
@@ -374,6 +376,8 @@ const PuzzleScoreboard: React.FC = () => {
           console.log('Strands spanagram bonus awarded');
         }
       }
+      
+      console.log('Final Strands score:', gameScores.strands);
     }
 
     const totalScore = gameScores.wordle + gameScores.connections + gameScores.strands;
