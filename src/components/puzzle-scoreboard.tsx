@@ -370,28 +370,27 @@ const PuzzleScoreboard: React.FC = () => {
         });
 
         if (allPerfect) {
-          // Then check if it's in purple-first sequence
-          const isPurpleFirst = 
-            gameLines[0] === '🟪🟪🟪🟪' &&
-            gameLines[1] === '🟨🟨🟨🟨' &&
-            gameLines[2] === '🟦🟦🟦🟦' &&
-            gameLines[3] === '🟩🟩🟩🟩';
+          // For 3 points: must have purple first AND all perfect lines
+          const purpleFirst = gameLines[0] === '🟪🟪🟪🟪';
 
-          if (isPurpleFirst) {
+          if (purpleFirst) {
             gameScores.connections = 3;
             bonusPoints.connectionsPerfect = true;
           } else {
+            // Still a perfect completion, just not purple first
             gameScores.connections = 2;
           }
         } else {
+          // Completed but with mistakes
           gameScores.connections = 1;
         }
-      }
 
-      console.log('Final Connections score:', {
-        score: gameScores.connections,
-        perfect: bonusPoints.connectionsPerfect
-      });
+        console.log('Final Connections score:', {
+          score: gameScores.connections,
+          perfect: bonusPoints.connectionsPerfect,
+          allPerfect
+        });
+      }
     }
 
     // Process Wordle section
