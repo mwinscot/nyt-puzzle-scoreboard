@@ -298,53 +298,47 @@ const PuzzleScoreboard: React.FC = () => {
           // Only collect lines with exactly 4 colored squares
           const squares = [...line].filter(c => ['🟪','🟨','🟦','🟩'].includes(c));
           if (squares.length === 4) {
-            const gameLine = squares.join('');
-            gameLines.push(gameLine);
-            console.log('Found game line:', gameLine);
+            gameLines.push(squares.join(''));
+            console.log('Found game line:', squares.join(''));
           }
         }
       }
 
-      console.log('Processing game lines:', gameLines);
+      console.log('Extracted game lines:', gameLines);
 
       // Only process if we have exactly 4 lines
       if (gameLines.length === 4) {
-        console.log('Evaluating Connections lines:', gameLines);
+        console.log('Processing lines:', gameLines);
 
-        // First check if all lines are perfect (each line has all same color)
+        // Simple check: each line should be exactly the same character repeated 4 times
         const allPerfect = gameLines.every(line => {
-          const chars = [...line];
-          const firstChar = chars[0];
-          const isPerfect = chars.every(char => char === firstChar);
-          console.log(`Checking line ${line} perfect:`, isPerfect);
+          const firstEmoji = line.charAt(0);
+          const perfectLine = firstEmoji + firstEmoji + firstEmoji + firstEmoji;
+          const isPerfect = line === perfectLine;
+          console.log(`Line check: "${line}" === "${perfectLine}" ? ${isPerfect}`);
           return isPerfect;
         });
 
-        console.log('All lines perfect?', allPerfect);
-        
         if (allPerfect) {
-          // Check if purple is first
-          const purpleFirst = gameLines[0] === '🟪🟪🟪🟪';
-          console.log('Is purple first?', purpleFirst, 'First line:', gameLines[0]);
+          const purpleFirst = gameLines[0].startsWith('🟪');
+          console.log(`Purple first check: line="${gameLines[0]}", starts with purple? ${purpleFirst}`);
 
           if (purpleFirst) {
-            console.log('Setting score to 3 - purple first and all perfect');
             gameScores.connections = 3;
             bonusPoints.connectionsPerfect = true;
+            console.log('✅ Score 3: Perfect lines with purple first');
           } else {
-            console.log('Setting score to 2 - all perfect but not purple first');
             gameScores.connections = 2;
+            console.log('✅ Score 2: Perfect lines but not purple first');
           }
         } else {
-          console.log('Setting score to 1 - not all perfect');
           gameScores.connections = 1;
+          console.log('✅ Score 1: Lines not perfect');
         }
 
-        console.log('Final connections score:', {
+        console.log('Final score:', {
           score: gameScores.connections,
-          perfect: bonusPoints.connectionsPerfect,
-          allPerfect,
-          purpleFirst: gameLines[0] === '🟪🟪🟪🟪'
+          perfect: bonusPoints.connectionsPerfect
         });
       }
     }
