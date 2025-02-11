@@ -309,33 +309,43 @@ const PuzzleScoreboard: React.FC = () => {
 
       // Only process if we have exactly 4 lines
       if (gameLines.length === 4) {
-        // First check if all lines are perfect
+        console.log('Evaluating Connections lines:', gameLines);
+
+        // First check if all lines are perfect (each line has all same color)
         const allPerfect = gameLines.every(line => {
-          const firstChar = line[0];
-          const isPerfect = line === firstChar.repeat(4);
-          console.log(`Line check: ${line} is perfect? ${isPerfect}`);
+          const chars = [...line];
+          const firstChar = chars[0];
+          const isPerfect = chars.every(char => char === firstChar);
+          console.log(`Checking line ${line} perfect:`, isPerfect);
           return isPerfect;
         });
 
-        console.log('All perfect?', allPerfect);
-
+        console.log('All lines perfect?', allPerfect);
+        
         if (allPerfect) {
-          // For 3 points: must have purple first AND all perfect lines
+          // Check if purple is first
           const purpleFirst = gameLines[0] === '🟪🟪🟪🟪';
-          console.log('Purple first?', purpleFirst);
+          console.log('Is purple first?', purpleFirst, 'First line:', gameLines[0]);
 
           if (purpleFirst) {
+            console.log('Setting score to 3 - purple first and all perfect');
             gameScores.connections = 3;
             bonusPoints.connectionsPerfect = true;
-            console.log('Setting Connections score to 3 (purple first perfect)');
           } else {
+            console.log('Setting score to 2 - all perfect but not purple first');
             gameScores.connections = 2;
-            console.log('Setting Connections score to 2 (perfect but not purple first)');
           }
         } else {
+          console.log('Setting score to 1 - not all perfect');
           gameScores.connections = 1;
-          console.log('Setting Connections score to 1 (completed with mistakes)');
         }
+
+        console.log('Final connections score:', {
+          score: gameScores.connections,
+          perfect: bonusPoints.connectionsPerfect,
+          allPerfect,
+          purpleFirst: gameLines[0] === '🟪🟪🟪🟪'
+        });
       }
     }
 
