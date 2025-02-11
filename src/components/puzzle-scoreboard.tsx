@@ -322,10 +322,10 @@ const PuzzleScoreboard: React.FC = () => {
       console.log('Found game lines:', gameLines);
 
       const completed = gameLines.length === 4;
-      const purpleFirst = completed && gameLines[0] === '🟪🟪🟪🟪';
+      const purpleFirst = completed && /^🟪🟪🟪🟪/.test(gameLines[0]);
       const hasErrors = gameLines.some(line => {
         const firstSquare = line[0];
-        return Array.from(line).some(square => square !== firstSquare);
+        return !line || Array.from(line).some(square => square !== firstSquare);
       });
 
       console.log('Game analysis:', {
@@ -344,9 +344,9 @@ const PuzzleScoreboard: React.FC = () => {
         gameScores.connections = 3;
         bonusPoints.connectionsPerfect = true;
         console.log('Perfect game with purple first: 3 points');
-      } else if (purpleFirst || !hasErrors) {
+      } else if (!hasErrors) {
         gameScores.connections = 2;
-        console.log('Either purple first or perfect: 2 points');
+        console.log('Perfect but purple not first: 2 points');
       } else {
         gameScores.connections = 1;
         console.log('Completed with errors: 1 point');
