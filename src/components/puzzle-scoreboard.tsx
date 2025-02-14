@@ -376,11 +376,22 @@ const PuzzleScoreboard: React.FC = () => {
 
       if (lines.length > 0) {
         gameScores.strands = 1;
-        const firstThreeLines = lines.slice(0, 3);
-        const foundSpanagram = firstThreeLines.some(line => line === '🔵🔵🔵🔵');
+        // Check if yellow circle is in first three positions of first line
+        const firstLine = lines[0];
+        const firstThreeEmojis = [...firstLine].slice(0, 3);
+        const foundSpanagram = firstThreeEmojis.includes('🟡');
+        console.log('Strands check:', {
+          firstLine,
+          firstThreeEmojis,
+          foundSpanagram
+        });
+        
         if (foundSpanagram) {
           gameScores.strands += 1;
           bonusPoints.strandsSpanagram = true;
+          console.log('✅ Strands bonus: Yellow in first 3 positions');
+        } else {
+          console.log('❌ No Strands bonus: Yellow not in first 3 positions');
         }
       }
     }
