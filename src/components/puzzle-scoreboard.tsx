@@ -384,15 +384,18 @@ const PuzzleScoreboard: React.FC = () => {
 
         if (completed) {
           gameScores.wordle = 1;
-          if (lines.length <= 3) {
+          // Only give bonus point if solved in 3 or fewer tries
+          const attemptsCount = lines.length;
+          if (attemptsCount <= 3) {
             gameScores.wordle += 1;
             bonusPoints.wordleQuick = true;
-            console.log('✅ Wordle bonus: Completed in 3 or fewer lines');
+            console.log('✅ Wordle bonus: Completed in 3 or fewer lines (attempts:', attemptsCount, ')');
           } else {
-            console.log('✅ Wordle base point only: Completed but took more than 3 lines');
+            console.log('✅ Wordle base point only: Completed in', attemptsCount, 'lines');
           }
         } else {
           console.log('❌ No Wordle points: Not completed');
+          gameScores.wordle = 0;
         }
       }
     }
