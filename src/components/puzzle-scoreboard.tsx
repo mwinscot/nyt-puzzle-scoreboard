@@ -89,7 +89,7 @@ const PuzzleScoreboard: React.FC = () => {
     player3: initialPlayerData(),
     player4: initialPlayerData()
   });
-  const [placeholderText, setPlaceholderText] = useState<string>('');
+  const [placeholderText] = useState<string>('');
  
   const { start } = getMonthDateRange();
  
@@ -200,15 +200,15 @@ const PuzzleScoreboard: React.FC = () => {
   }
 
   const handleArchiveComplete = () => {
-    fetchAllScores(); // Now fetchAllScores is in scope
+    fetchAllScores();
   };
  
   const handleSubmit = async () => {
     if (!currentEntry || !inputText || !isAdmin) return;
  
     try {
-      const { score, bonusPoints, gameScores } = calculateScores(inputText);
-      console.log('Calculated scores:', { score, bonusPoints, gameScores });
+      const result = calculateScores(inputText);
+      console.log('Calculated scores:', result);
       
       const playerName = currentEntry === 'player1' ? 'Keith' : 
                         currentEntry === 'player2' ? 'Mike' : 
@@ -228,26 +228,26 @@ const PuzzleScoreboard: React.FC = () => {
       const scoreData = {
         date: currentDate,
         player_id: player.id,
-        wordle: Math.max(0, Number(gameScores.wordle)) || 0,
-        connections: Math.max(0, Number(gameScores.connections)) || 0,
-        strands: Math.max(0, Number(gameScores.strands)) || 0,
-        total: Math.max(0, Number(score)) || 0,
-        bonus_wordle: Boolean(bonusPoints.wordleQuick),
-        bonus_connections: Boolean(bonusPoints.connectionsPerfect),
-        bonus_strands: Boolean(bonusPoints.strandsSpanagram),
+        wordle: Math.max(0, Number(result.gameScores.wordle)) || 0,
+        connections: Math.max(0, Number(result.gameScores.connections)) || 0,
+        strands: Math.max(0, Number(result.gameScores.strands)) || 0,
+        total: Math.max(0, Number(result.score)) || 0,
+        bonus_wordle: Boolean(result.bonusPoints.wordleQuick),
+        bonus_connections: Boolean(result.bonusPoints.connectionsPerfect),
+        bonus_strands: Boolean(result.bonusPoints.strandsSpanagram),
         finalized: false,
         archived: false
       };
 
       console.log('Submitting score data:', scoreData);
  
-      const { data: result, error: scoreError } = await supabase
+      const { data: submitResult, error: scoreError } = await supabase
         .from('daily_scores')
         .upsert(scoreData)
         .select();
 
       if (scoreError) throw scoreError;
-      console.log('Submission result:', result);
+      console.log('Submission result:', submitResult);
  
       await fetchAllScores();
       setInputText('');
@@ -271,19 +271,42 @@ const PuzzleScoreboard: React.FC = () => {
       strandsSpanagram: false
     };
 
-    // Split into sections more reliably by using a positive lookbehind
-    const sections = input.split(/\n(?=Connections|Wordle|Strands)/);
-    console.log('Found sections:', sections.map(s => s.trim().split('\n')[0]));
+    // Split into sections
+    const sections = input.split(/\n(?=(?:Connections|Wordle|Strands))/);
+    
+    // Process Wordle section
+    const wordleSection = sections.find(s => s.trim().startsWith('Wordle'));
+    if (wordleSection) {
+      // Reset scores first
+      gameScores.wordle = 0;
+      bonusPoints.wordleQuick = false;
+
+      const guessLines = wordleSection
+        .split('\n')
+        .map(l => l.trim())
+        .filter(l => {
+          const squares = [...l].filter(c => ['⬛', '⬜', '🟨', '🟩'].includes(c));
+          return squares.length === 5;  // Must have exactly 5 squares
+        });
+
+      if (guessLines.length > 0 && guessLines[guessLines.length - 1] === '🟩🟩🟩🟩🟩') {
+        // Base point for completion
+        gameScores.wordle = 1;
+        console.log('Wordle completed in', guessLines.length, 'guesses');
+        
+        // Only give bonus for 3 or fewer guesses
+        if (guessLines.length <= 3) {
+          console.log('Wordle bonus awarded - completed in 3 or fewer');
+          bonusPoints.wordleQuick = true;
+          gameScores.wordle = gameScores.wordle + 1;
+        }
+      }
+    }
 
     // Process Connections section
     const connectionsSection = sections.find(s => s.startsWith('Connections'));
     if (connectionsSection) {
-      console.log('Raw Connections section:\n', connectionsSection);
-      
-      const lines = connectionsSection.split('\n')
-        .map(l => l.trim())
-        .filter(Boolean);
-
+      const lines = connectionsSection.split('\n').map(l => l.trim());
       const gameLines: string[] = [];
       let foundPuzzle = false;
 
@@ -361,54 +384,6 @@ const PuzzleScoreboard: React.FC = () => {
       }
     }
 
-    // Process remaining sections
-    // Process Wordle section
-    const wordleSection = sections.find(s => s.startsWith('Wordle'));
-    if (wordleSection) {
-      // Only get lines that are actual guesses (must be exactly 5 squares)
-      const guessLines = wordleSection.split('\n')
-        .map(l => l.trim())
-        .filter(l => {
-          // Only count lines with exactly 5 colored squares
-          const squares = [...l].filter(c => ['⬛', '⬜', '🟨', '🟩'].includes(c));
-          return squares.length === 5;
-        });
-
-      console.log('Wordle guess lines:', guessLines);
-
-      if (guessLines.length > 0) {
-        // Check if the last line is all green squares (completed)
-        const lastLine = guessLines[guessLines.length - 1];
-        const isComplete = lastLine === '🟩🟩🟩🟩🟩';
-        const numGuesses = guessLines.length;
-        
-        console.log('Wordle check:', {
-          lastLine,
-          isComplete,
-          numGuesses,
-          lines: guessLines
-        });
-
-        if (isComplete) {
-          // Base point for completion, no matter how many guesses
-          gameScores.wordle = 1;
-          console.log('✅ Wordle base point for completion');
-          
-          // Bonus point ONLY if completed in 3 or fewer guesses
-          if (numGuesses <= 3) {
-            gameScores.wordle += 1;
-            bonusPoints.wordleQuick = true;
-            console.log('✅ Wordle bonus: completed in 3 or fewer guesses');
-          } else {
-            console.log('❌ No Wordle bonus: took', numGuesses, 'guesses');
-          }
-        } else {
-          console.log('❌ No Wordle points: not completed');
-          gameScores.wordle = 0;
-        }
-      }
-    }
-
     // Process Strands section
     const strandsSection = sections.find(s => s.startsWith('Strands'));
     if (strandsSection) {
@@ -450,7 +425,7 @@ const PuzzleScoreboard: React.FC = () => {
     
     return { score: totalScore, bonusPoints, gameScores };
   };
- 
+
   const finalizeDayScores = async () => {
     if (!isAdmin) return;
     
