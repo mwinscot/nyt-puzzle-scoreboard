@@ -304,48 +304,59 @@ const PuzzleScoreboard: React.FC = () => {
 
       console.log('Extracted game lines:', gameLines);
 
-      if (gameLines.length === 4) {
-        // Use exact string matching for comparing lines
-        const purplePattern = '🟪🟪🟪🟪';
-        const validPatterns = [purplePattern, '🟨🟨🟨🟨', '🟦🟦🟦🟦', '🟩🟩🟩🟩'];
+      if (gameLines.length > 0) {
+        // Check if the last line is all the same color (completed)
+        const lastLine = gameLines[gameLines.length - 1];
+        const completed = lastLine === '🟪🟪🟪🟪' || 
+                         lastLine === '🟨🟨🟨🟨' || 
+                         lastLine === '🟦🟦🟦🟦' || 
+                         lastLine === '🟩🟩🟩🟩';
 
-        // Check if all lines exactly match valid patterns
-        const lineChecks = gameLines.map((line, i) => {
-          const isPerfect = validPatterns.includes(line);
-          console.log(`Line ${i + 1} "${line}" matches a valid pattern? ${isPerfect}`);
-          return isPerfect;
+        console.log('Connections completion check:', {
+          lastLine,
+          completed,
+          totalLines: gameLines.length
         });
 
-        const allPerfect = lineChecks.every(Boolean);
-        const purpleFirst = gameLines[0] === purplePattern;
+        if (completed) {
+          // Now check if all lines are perfect for higher scores
+          const validPatterns = ['🟪🟪🟪🟪', '🟨🟨🟨🟨', '🟦🟦🟦🟦', '🟩🟩🟩🟩'];
+          const lineChecks = gameLines.map((line, i) => {
+            const isPerfect = validPatterns.includes(line);
+            console.log(`Line ${i + 1} "${line}" matches a valid pattern? ${isPerfect}`);
+            return isPerfect;
+          });
 
-        console.log('Scoring check:', {
-          allPerfect,
-          purpleFirst,
-          firstLine: gameLines[0],
-          expectedPurple: purplePattern,
-          match: gameLines[0] === purplePattern
-        });
+          const allPerfect = lineChecks.every(Boolean);
+          const purpleFirst = gameLines[0] === '🟪🟪🟪🟪';
 
-        if (allPerfect) {
-          if (purpleFirst) {
-            gameScores.connections = 3;
-            bonusPoints.connectionsPerfect = true;
-            console.log('✅ Score 3: Perfect completion with purple first');
+          console.log('Scoring check:', {
+            allPerfect,
+            purpleFirst,
+            firstLine: gameLines[0]
+          });
+
+          if (allPerfect) {
+            if (purpleFirst) {
+              gameScores.connections = 3;
+              bonusPoints.connectionsPerfect = true;
+              console.log('✅ Score 3: Perfect completion with purple first');
+            } else {
+              gameScores.connections = 2;
+              console.log('✅ Score 2: Perfect completion but purple not first');
+            }
           } else {
-            gameScores.connections = 2;
-            console.log('✅ Score 2: Perfect completion but purple not first');
+            gameScores.connections = 1;
+            console.log('✅ Score 1: Completed with mistakes');
           }
         } else {
-          gameScores.connections = 1;
-          console.log('✅ Score 1: Completed but not perfect');
+          gameScores.connections = 0;
+          console.log('❌ Score 0: Not completed');
         }
 
         console.log('Final Connections score:', {
           score: gameScores.connections,
-          perfect: bonusPoints.connectionsPerfect,
-          allPerfect,
-          purpleFirst
+          perfect: bonusPoints.connectionsPerfect
         });
       }
     }
@@ -376,20 +387,23 @@ const PuzzleScoreboard: React.FC = () => {
 
       if (lines.length > 0) {
         gameScores.strands = 1;
-        // Check if yellow circle is in first three positions of first line
+        // Check specifically the first line for yellow in first 3 positions
         const firstLine = lines[0];
         const firstThreeEmojis = [...firstLine].slice(0, 3);
-        const foundSpanagram = firstThreeEmojis.includes('🟡');
+        const yellowIndex = [...firstLine].findIndex(emoji => emoji === '🟡');
+        const foundSpanagram = yellowIndex >= 0 && yellowIndex < 3;
+        
         console.log('Strands check:', {
           firstLine,
           firstThreeEmojis,
+          yellowIndex,
           foundSpanagram
         });
         
         if (foundSpanagram) {
           gameScores.strands += 1;
           bonusPoints.strandsSpanagram = true;
-          console.log('✅ Strands bonus: Yellow in first 3 positions');
+          console.log('✅ Strands bonus: Yellow in first 3 positions (index:', yellowIndex, ')');
         } else {
           console.log('❌ No Strands bonus: Yellow not in first 3 positions');
         }
