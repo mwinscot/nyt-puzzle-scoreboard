@@ -365,38 +365,51 @@ const PuzzleScoreboard: React.FC = () => {
     // Process Wordle section
     const wordleSection = sections.find(s => s.startsWith('Wordle'));
     if (wordleSection) {
-      const lines = wordleSection.split('\n')
+      // Only get lines that are actual guesses (must be exactly 5 squares)
+      const guessLines = wordleSection.split('\n')
         .map(l => l.trim())
-        .filter(l => l.includes('⬛') || l.includes('⬜') || l.includes('🟨') || l.includes('🟩'));
-
-      console.log('Wordle lines:', lines);
-
-      if (lines.length > 0) {
-        // Check if the last line is all green squares (completed)
-        const lastLine = lines[lines.length - 1];
-        const completed = lastLine === '🟩🟩🟩🟩🟩';
-        
-        console.log('Wordle completion check:', {
-          lastLine,
-          completed,
-          lineCount: lines.length
+        .filter(l => {
+          const squares = [...l].filter(c => c === '⬛' || c === '⬜' || c === '🟨' || c === '🟩');
+          return squares.length === 5;  // Must be exactly 5 squares to be a valid guess
         });
 
-        if (completed) {
+      console.log('Wordle guess lines:', guessLines);
+
+      if (guessLines.length > 0) {
+        // Check if last line is all green (completed)
+        const lastLine = guessLines[guessLines.length - 1];
+        const isComplete = lastLine === '🟩🟩🟩🟩🟩';
+        const numGuesses = guessLines.length;
+        
+        console.log('Wordle check:', {
+          lastLine,
+          isComplete,
+          numGuesses,
+          lines: guessLines
+        });
+
+        if (isComplete) {
+          // Base point for completion
           gameScores.wordle = 1;
-          // Only give bonus point if solved in 3 or fewer tries
-          const attemptsCount = lines.length;
-          if (attemptsCount <= 3) {
+          console.log('✅ Wordle base point for completion');
+          
+          // Bonus point only if completed in 3 or fewer guesses
+          if (numGuesses <= 3) {
             gameScores.wordle += 1;
             bonusPoints.wordleQuick = true;
-            console.log('✅ Wordle bonus: Completed in 3 or fewer lines (attempts:', attemptsCount, ')');
+            console.log('✅ Wordle bonus point: Completed in 3 or fewer guesses');
           } else {
-            console.log('✅ Wordle base point only: Completed in', attemptsCount, 'lines');
+            console.log('❌ No Wordle bonus: Took', numGuesses, 'guesses');
           }
         } else {
           console.log('❌ No Wordle points: Not completed');
-          gameScores.wordle = 0;
         }
+
+        console.log('Final Wordle score:', {
+          score: gameScores.wordle,
+          bonus: bonusPoints.wordleQuick,
+          guesses: numGuesses
+        });
       }
     }
 
