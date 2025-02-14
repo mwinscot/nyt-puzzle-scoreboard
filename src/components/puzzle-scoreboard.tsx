@@ -271,9 +271,9 @@ const PuzzleScoreboard: React.FC = () => {
       strandsSpanagram: false
     };
 
-    // Split into sections by game headers
-    const sections = input.split(/\n(?=(?:Connections|Wordle|Strands))/);
-    console.log('Found sections:', sections.map(s => s.split('\n')[0]));
+    // Split into sections more reliably by using a positive lookbehind
+    const sections = input.split(/\n(?=Connections|Wordle|Strands)/);
+    console.log('Found sections:', sections.map(s => s.trim().split('\n')[0]));
 
     // Process Connections section
     const connectionsSection = sections.find(s => s.startsWith('Connections'));
@@ -284,14 +284,13 @@ const PuzzleScoreboard: React.FC = () => {
         .map(l => l.trim())
         .filter(Boolean);
 
-      // Get game lines after "Puzzle #" line
       const gameLines: string[] = [];
       let foundPuzzle = false;
 
+      // Extract game lines
       for (const line of lines) {
         if (line.includes('Puzzle #')) {
           foundPuzzle = true;
-          console.log('Found puzzle line:', line);
           continue;
         }
         if (foundPuzzle) {
@@ -299,50 +298,59 @@ const PuzzleScoreboard: React.FC = () => {
           const squares = [...line].filter(c => ['🟪','🟨','🟦','🟩'].includes(c));
           if (squares.length === 4) {
             gameLines.push(squares.join(''));
-            console.log('Found game line:', squares.join(''));
           }
         }
       }
 
       console.log('Extracted game lines:', gameLines);
 
-      // Only process if we have exactly 4 lines
       if (gameLines.length === 4) {
-        console.log('Processing lines:', gameLines);
+        // Use exact string matching for comparing lines
+        const purplePattern = '🟪🟪🟪🟪';
+        const validPatterns = [purplePattern, '🟨🟨🟨🟨', '🟦🟦🟦🟦', '🟩🟩🟩🟩'];
 
-        // Simple check: each line should be exactly the same character repeated 4 times
-        const allPerfect = gameLines.every(line => {
-          const firstEmoji = line.charAt(0);
-          const perfectLine = firstEmoji + firstEmoji + firstEmoji + firstEmoji;
-          const isPerfect = line === perfectLine;
-          console.log(`Line check: "${line}" === "${perfectLine}" ? ${isPerfect}`);
+        // Check if all lines exactly match valid patterns
+        const lineChecks = gameLines.map((line, i) => {
+          const isPerfect = validPatterns.includes(line);
+          console.log(`Line ${i + 1} "${line}" matches a valid pattern? ${isPerfect}`);
           return isPerfect;
         });
 
-        if (allPerfect) {
-          const purpleFirst = gameLines[0].startsWith('🟪');
-          console.log(`Purple first check: line="${gameLines[0]}", starts with purple? ${purpleFirst}`);
+        const allPerfect = lineChecks.every(Boolean);
+        const purpleFirst = gameLines[0] === purplePattern;
 
+        console.log('Scoring check:', {
+          allPerfect,
+          purpleFirst,
+          firstLine: gameLines[0],
+          expectedPurple: purplePattern,
+          match: gameLines[0] === purplePattern
+        });
+
+        if (allPerfect) {
           if (purpleFirst) {
             gameScores.connections = 3;
             bonusPoints.connectionsPerfect = true;
-            console.log('✅ Score 3: Perfect lines with purple first');
+            console.log('✅ Score 3: Perfect completion with purple first');
           } else {
             gameScores.connections = 2;
-            console.log('✅ Score 2: Perfect lines but not purple first');
+            console.log('✅ Score 2: Perfect completion but purple not first');
           }
         } else {
           gameScores.connections = 1;
-          console.log('✅ Score 1: Lines not perfect');
+          console.log('✅ Score 1: Completed but not perfect');
         }
 
-        console.log('Final score:', {
+        console.log('Final Connections score:', {
           score: gameScores.connections,
-          perfect: bonusPoints.connectionsPerfect
+          perfect: bonusPoints.connectionsPerfect,
+          allPerfect,
+          purpleFirst
         });
       }
     }
 
+    // Process remaining sections
     // Process Wordle section
     const wordleSection = sections.find(s => s.startsWith('Wordle'));
     if (wordleSection) {
