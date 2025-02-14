@@ -367,13 +367,32 @@ const PuzzleScoreboard: React.FC = () => {
     if (wordleSection) {
       const lines = wordleSection.split('\n')
         .map(l => l.trim())
-        .filter(l => l.includes('⬜') || l.includes('🟨') || l.includes('🟩'));
+        .filter(l => l.includes('⬛') || l.includes('⬜') || l.includes('🟨') || l.includes('🟩'));
+
+      console.log('Wordle lines:', lines);
 
       if (lines.length > 0) {
-        gameScores.wordle = 1;
-        if (lines.length <= 3) {
-          gameScores.wordle += 1;
-          bonusPoints.wordleQuick = true;
+        // Check if the last line is all green squares (completed)
+        const lastLine = lines[lines.length - 1];
+        const completed = lastLine === '🟩🟩🟩🟩🟩';
+        
+        console.log('Wordle completion check:', {
+          lastLine,
+          completed,
+          lineCount: lines.length
+        });
+
+        if (completed) {
+          gameScores.wordle = 1;
+          if (lines.length <= 3) {
+            gameScores.wordle += 1;
+            bonusPoints.wordleQuick = true;
+            console.log('✅ Wordle bonus: Completed in 3 or fewer lines');
+          } else {
+            console.log('✅ Wordle base point only: Completed but took more than 3 lines');
+          }
+        } else {
+          console.log('❌ No Wordle points: Not completed');
         }
       }
     }
