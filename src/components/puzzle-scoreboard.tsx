@@ -369,14 +369,15 @@ const PuzzleScoreboard: React.FC = () => {
       const guessLines = wordleSection.split('\n')
         .map(l => l.trim())
         .filter(l => {
-          const squares = [...l].filter(c => c === '⬛' || c === '⬜' || c === '🟨' || c === '🟩');
-          return squares.length === 5;  // Must be exactly 5 squares to be a valid guess
+          // Only count lines with exactly 5 colored squares
+          const squares = [...l].filter(c => ['⬛', '⬜', '🟨', '🟩'].includes(c));
+          return squares.length === 5;
         });
 
       console.log('Wordle guess lines:', guessLines);
 
       if (guessLines.length > 0) {
-        // Check if last line is all green (completed)
+        // Check if the last line is all green squares (completed)
         const lastLine = guessLines[guessLines.length - 1];
         const isComplete = lastLine === '🟩🟩🟩🟩🟩';
         const numGuesses = guessLines.length;
@@ -389,27 +390,22 @@ const PuzzleScoreboard: React.FC = () => {
         });
 
         if (isComplete) {
-          // Base point for completion
+          // Base point for completion, no matter how many guesses
           gameScores.wordle = 1;
           console.log('✅ Wordle base point for completion');
           
-          // Bonus point only if completed in 3 or fewer guesses
+          // Bonus point ONLY if completed in 3 or fewer guesses
           if (numGuesses <= 3) {
             gameScores.wordle += 1;
             bonusPoints.wordleQuick = true;
-            console.log('✅ Wordle bonus point: Completed in 3 or fewer guesses');
+            console.log('✅ Wordle bonus: completed in 3 or fewer guesses');
           } else {
-            console.log('❌ No Wordle bonus: Took', numGuesses, 'guesses');
+            console.log('❌ No Wordle bonus: took', numGuesses, 'guesses');
           }
         } else {
-          console.log('❌ No Wordle points: Not completed');
+          console.log('❌ No Wordle points: not completed');
+          gameScores.wordle = 0;
         }
-
-        console.log('Final Wordle score:', {
-          score: gameScores.wordle,
-          bonus: bonusPoints.wordleQuick,
-          guesses: numGuesses
-        });
       }
     }
 
