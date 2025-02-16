@@ -281,6 +281,7 @@ const PuzzleScoreboard: React.FC = () => {
       gameScores.wordle = 0;
       bonusPoints.wordleQuick = false;
 
+      // Extract guess lines with emoji squares
       const guessLines = wordleSection
         .split('\n')
         .map(l => l.trim())
@@ -289,16 +290,22 @@ const PuzzleScoreboard: React.FC = () => {
           return squares.length === 5;  // Must have exactly 5 squares
         });
 
-      if (guessLines.length > 0 && guessLines[guessLines.length - 1] === '🟩🟩🟩🟩🟩') {
-        // Base point for completion
-        gameScores.wordle = 1;
-        console.log('Wordle completed in', guessLines.length, 'guesses');
-        
-        // Only give bonus for 3 or fewer guesses
-        if (guessLines.length <= 3) {
-          console.log('Wordle bonus awarded - completed in 3 or fewer');
-          bonusPoints.wordleQuick = true;
-          gameScores.wordle = gameScores.wordle + 1;
+      // Check if puzzle was solved (last line is all green)
+      if (guessLines.length > 0) {
+        const lastLine = guessLines[guessLines.length - 1];
+        const solved = lastLine === '🟩🟩🟩🟩🟩';
+
+        if (solved) {
+          // Base point for completion
+          gameScores.wordle = 1;
+          console.log('Wordle completed in', guessLines.length, 'guesses');
+          
+          // Only give bonus for 3 or fewer guesses
+          if (guessLines.length <= 3) {
+            console.log('Wordle bonus awarded - completed in 3 or fewer');
+            bonusPoints.wordleQuick = true;
+            gameScores.wordle += 1;
+          }
         }
       }
     }
