@@ -3,7 +3,7 @@ import requests
 from datetime import datetime
 
 # The base URL for the API - use localhost in development, production URL in deployment
-BASE_URL = "http://localhost:3000/api"  # Change this to your Vercel URL in production
+BASE_URL = "https://nyt-puzzle-scoreboard-mbkd0jcgb-mike-winscotts-projects.vercel.app/api"
 
 def fetch_february_scores():
     url = f"{BASE_URL}/scores"
