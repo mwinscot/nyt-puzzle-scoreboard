@@ -1,0 +1,5 @@
+# Core dependencies
+flask
+requests
+python-dotenv
+supabase-py
