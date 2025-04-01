@@ -24,20 +24,33 @@ interface ArchiveScoreRecord extends ScoreRecord {
 export const ArchiveButton: React.FC<ArchiveButtonProps> = ({ onArchiveComplete }) => {
   const [isArchiving, setIsArchiving] = useState(false);
 
-  const archiveMonth = async () => {
-    if (!confirm('Are you sure you want to archive the previous month?')) {
+  const archiveMonth = async (archiveCurrentMonth = false) => {
+    const monthType = archiveCurrentMonth ? 'current' : 'previous';
+    if (!confirm(`Are you sure you want to archive the ${monthType} month?`)) {
       return;
     }
 
     try {
       setIsArchiving(true);
       
-      // Calculate the date range for the previous month
+      // Calculate the date range based on whether we're archiving current or previous month
       const now = new Date();
-      const previousMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-      const startDate = previousMonth.toISOString().split('T')[0];
-      const endDate = new Date(now.getFullYear(), now.getMonth(), 0)
-        .toISOString().split('T')[0];
+      let targetMonth;
+      
+      if (archiveCurrentMonth) {
+        // For current month
+        targetMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      } else {
+        // For previous month
+        targetMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      }
+      
+      const startDate = targetMonth.toISOString().split('T')[0];
+      const endDate = new Date(
+        archiveCurrentMonth ? now.getFullYear() : now.getFullYear(), 
+        archiveCurrentMonth ? now.getMonth() + 1 : now.getMonth(), 
+        0
+      ).toISOString().split('T')[0];
       
       // Get month in YYYY-MM format
       const month = startDate.substring(0, 7);
@@ -108,13 +121,22 @@ export const ArchiveButton: React.FC<ArchiveButtonProps> = ({ onArchiveComplete 
   };
 
   return (
-    <button
-      onClick={archiveMonth}
-      disabled={isArchiving}
-      className="p-2 bg-yellow-500 text-white rounded hover:bg-yellow-600 disabled:bg-gray-400"
-    >
-      {isArchiving ? 'Archiving...' : 'Archive Previous Month'}
-    </button>
+    <div className="flex space-x-2">
+      <button
+        onClick={() => archiveMonth(false)}
+        disabled={isArchiving}
+        className="p-2 bg-yellow-500 text-white rounded hover:bg-yellow-600 disabled:bg-gray-400"
+      >
+        {isArchiving ? 'Archiving...' : 'Archive Previous Month'}
+      </button>
+      <button
+        onClick={() => archiveMonth(true)}
+        disabled={isArchiving}
+        className="p-2 bg-orange-500 text-white rounded hover:bg-orange-600 disabled:bg-gray-400"
+      >
+        {isArchiving ? 'Archiving...' : 'Archive Current Month'}
+      </button>
+    </div>
   );
 };
 
